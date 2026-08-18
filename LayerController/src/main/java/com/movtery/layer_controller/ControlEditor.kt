@@ -137,16 +137,61 @@ fun ControlEditorLayer(
             /** 拖动中的右下角的手柄位置 BottomRight */
             var dragBR by remember { mutableStateOf(Offset.Zero) }
 
-            //空白可点击层，点击背景清除选中的按钮
+            //空白可点击层，点击背景清除选中的按钮（或点击自由区域直接选中对应摇杆）
             Box(
                 modifier = Modifier
                     .fillMaxSize()
                     .alpha(0f)
-                    .clickable(
-                        indication = null,
-                        interactionSource = remember { MutableInteractionSource() },
-                        onClick = onBackgroundClick
-                    )
+                    .pointerInput(renderingLayers, screenSize) {
+                        detectTapGestures(
+                            onTap = { tapOffset ->
+                                var clickedJoystick: ObservableJoystickData? = null
+                                var clickedLayer: ObservableControlLayer? = null
+
+                                for (layer in renderingLayers) {
+                                    for (joystick in layer.joystickButtons.value) {
+                                        if (joystick.triggerMode == com.movtery.layer_controller.data.JoystickTriggerMode.FREE) {
+                                            val areaPos = joystick.freeAreaPosition
+                                            val areaSize = joystick.freeAreaSize
+                                            val areaWidthPx = when (areaSize.type) {
+                                                ButtonSize.Type.Dp -> with(density) { areaSize.widthDp.dp.toPx() }
+                                                ButtonSize.Type.Percentage -> {
+                                                    val ref = if (areaSize.widthReference == ButtonSize.Reference.ScreenWidth) screenSize.width else screenSize.height
+                                                    ref * (areaSize.widthPercentage / 10000f)
+                                                }
+                                                else -> with(density) { areaSize.widthDp.dp.toPx() }
+                                            }
+                                            val areaHeightPx = when (areaSize.type) {
+                                                ButtonSize.Type.Dp -> with(density) { areaSize.heightDp.dp.toPx() }
+                                                ButtonSize.Type.Percentage -> {
+                                                    val ref = if (areaSize.heightReference == ButtonSize.Reference.ScreenWidth) screenSize.width else screenSize.height
+                                                    ref * (areaSize.heightPercentage / 10000f)
+                                                }
+                                                else -> with(density) { areaSize.heightDp.dp.toPx() }
+                                            }
+                                            val freeAreaRenderSize = IntSize(areaWidthPx.toInt(), areaHeightPx.toInt())
+                                            val areaOffset = getWidgetPosition(areaPos, freeAreaRenderSize, screenSize)
+
+                                            if (tapOffset.x >= areaOffset.x && tapOffset.x <= areaOffset.x + areaWidthPx &&
+                                                tapOffset.y >= areaOffset.y && tapOffset.y <= areaOffset.y + areaHeightPx
+                                            ) {
+                                                clickedJoystick = joystick
+                                                clickedLayer = layer
+                                                break
+                                            }
+                                        }
+                                    }
+                                    if (clickedJoystick != null) break
+                                }
+
+                                if (clickedJoystick != null && clickedLayer != null) {
+                                    onButtonTap(clickedJoystick, clickedLayer)
+                                } else {
+                                    onBackgroundClick()
+                                }
+                            }
+                        )
+                    }
             )
 
             val density = LocalDensity.current
@@ -222,44 +267,49 @@ fun ControlEditorLayer(
                     )
                 }
 
-                //当选中的是自由模式摇杆时，在画布上绘制其感应区域边界框
-                (selectedWidget as? ObservableJoystickData)?.takeIf { it.triggerMode == com.movtery.layer_controller.data.JoystickTriggerMode.FREE }?.let { joystick ->
-                    val areaPos = joystick.freeAreaPosition
-                    val areaSize = joystick.freeAreaSize
-                    val areaWidthPx = when (areaSize.type) {
-                        ButtonSize.Type.Dp -> with(density) { areaSize.widthDp.dp.toPx() }
-                        ButtonSize.Type.Percentage -> {
-                            val ref = if (areaSize.widthReference == ButtonSize.Reference.ScreenWidth) screenSize.width else screenSize.height
-                            ref * (areaSize.widthPercentage / 10000f)
-                        }
-                        else -> with(density) { areaSize.widthDp.dp.toPx() }
-                    }
-                    val areaHeightPx = when (areaSize.type) {
-                        ButtonSize.Type.Dp -> with(density) { areaSize.heightDp.dp.toPx() }
-                        ButtonSize.Type.Percentage -> {
-                            val ref = if (areaSize.heightReference == ButtonSize.Reference.ScreenWidth) screenSize.width else screenSize.height
-                            ref * (areaSize.heightPercentage / 10000f)
-                        }
-                        else -> with(density) { areaSize.heightDp.dp.toPx() }
-                    }
+                //在画布上绘制所有自由模式摇杆的感应区域边界框（即使未被选中也可见）
+                renderingLayers.forEach { layer ->
+                    layer.joystickButtons.value.forEach { joystick ->
+                        if (joystick.triggerMode == com.movtery.layer_controller.data.JoystickTriggerMode.FREE) {
+                            val areaPos = joystick.freeAreaPosition
+                            val areaSize = joystick.freeAreaSize
+                            val areaWidthPx = when (areaSize.type) {
+                                ButtonSize.Type.Dp -> with(density) { areaSize.widthDp.dp.toPx() }
+                                ButtonSize.Type.Percentage -> {
+                                    val ref = if (areaSize.widthReference == ButtonSize.Reference.ScreenWidth) screenSize.width else screenSize.height
+                                    ref * (areaSize.widthPercentage / 10000f)
+                                }
+                                else -> with(density) { areaSize.widthDp.dp.toPx() }
+                            }
+                            val areaHeightPx = when (areaSize.type) {
+                                ButtonSize.Type.Dp -> with(density) { areaSize.heightDp.dp.toPx() }
+                                ButtonSize.Type.Percentage -> {
+                                    val ref = if (areaSize.heightReference == ButtonSize.Reference.ScreenWidth) screenSize.width else screenSize.height
+                                    ref * (areaSize.heightPercentage / 10000f)
+                                }
+                                else -> with(density) { areaSize.heightDp.dp.toPx() }
+                            }
 
-                    val freeAreaRenderSize = IntSize(areaWidthPx.toInt(), areaHeightPx.toInt())
-                    val areaOffset = getWidgetPosition(areaPos, freeAreaRenderSize, screenSize)
+                            val freeAreaRenderSize = IntSize(areaWidthPx.toInt(), areaHeightPx.toInt())
+                            val areaOffset = getWidgetPosition(areaPos, freeAreaRenderSize, screenSize)
 
-                    drawRect(
-                        color = primaryColor.copy(alpha = 0.8f),
-                        topLeft = areaOffset,
-                        size = Size(areaWidthPx, areaHeightPx),
-                        style = Stroke(
-                            width = 2.dp.toPx(),
-                            pathEffect = androidx.compose.ui.graphics.PathEffect.dashPathEffect(floatArrayOf(15f, 15f), 0f)
-                        )
-                    )
-                    drawRect(
-                        color = primaryColor.copy(alpha = 0.30f),
-                        topLeft = areaOffset,
-                        size = Size(areaWidthPx, areaHeightPx)
-                    )
+                            val isSelected = selectedWidget == joystick
+                            drawRect(
+                                color = primaryColor.copy(alpha = if (isSelected) 0.85f else 0.5f),
+                                topLeft = areaOffset,
+                                size = Size(areaWidthPx, areaHeightPx),
+                                style = Stroke(
+                                    width = (if (isSelected) 2.dp else 1.5.dp).toPx(),
+                                    pathEffect = androidx.compose.ui.graphics.PathEffect.dashPathEffect(floatArrayOf(15f, 15f), 0f)
+                                )
+                            )
+                            drawRect(
+                                color = primaryColor.copy(alpha = if (isSelected) 0.30f else 0.15f),
+                                topLeft = areaOffset,
+                                size = Size(areaWidthPx, areaHeightPx)
+                            )
+                        }
+                    }
                 }
             }
 
@@ -493,12 +543,83 @@ fun ControlEditorLayer(
                     joystick.freeAreaSize = newAreaSize
                 }
 
-                // 整个感应区域的触摸拖动（在感应区域矩形上拖动可平移整块区域，且区域不能离开摇杆）
+            // 当选中的是自由模式摇杆时，为感应区域提供交互式缩放手柄和移动手柄
+            (selectedWidget as? ObservableJoystickData)?.takeIf { it.triggerMode == com.movtery.layer_controller.data.JoystickTriggerMode.FREE }?.let { joystick ->
+                val areaPos = joystick.freeAreaPosition
+                val areaSize = joystick.freeAreaSize
+                val areaWidthPx = when (areaSize.type) {
+                    ButtonSize.Type.Dp -> with(density) { areaSize.widthDp.dp.toPx() }
+                    ButtonSize.Type.Percentage -> {
+                        val ref = if (areaSize.widthReference == ButtonSize.Reference.ScreenWidth) screenSize.width else screenSize.height
+                        ref * (areaSize.widthPercentage / 10000f)
+                    }
+                    else -> with(density) { areaSize.widthDp.dp.toPx() }
+                }
+                val areaHeightPx = when (areaSize.type) {
+                    ButtonSize.Type.Dp -> with(density) { areaSize.heightDp.dp.toPx() }
+                    ButtonSize.Type.Percentage -> {
+                        val ref = if (areaSize.heightReference == ButtonSize.Reference.ScreenWidth) screenSize.width else screenSize.height
+                        ref * (areaSize.heightPercentage / 10000f)
+                    }
+                    else -> with(density) { areaSize.heightDp.dp.toPx() }
+                }
+
+                val freeAreaRenderSize = IntSize(areaWidthPx.toInt(), areaHeightPx.toInt())
+                var areaTL by remember(areaPos, freeAreaRenderSize, screenSize) {
+                    mutableStateOf(getWidgetPosition(areaPos, freeAreaRenderSize, screenSize))
+                }
+                var areaBR by remember(areaTL, freeAreaRenderSize) {
+                    mutableStateOf(Offset(areaTL.x + freeAreaRenderSize.width, areaTL.y + freeAreaRenderSize.height))
+                }
+
+                // 约束计算：感应区域不能脱离摇杆（感应区域必须包含摇杆本身）
+                val joystickSize = joystick.internalRenderSize
+                val joystickTL = getWidgetPosition(joystick, joystickSize, screenSize)
+                val joystickBR = Offset(joystickTL.x + joystickSize.width, joystickTL.y + joystickSize.height)
+
+                val updateAreaSizeAndPos = { newTopLeft: Offset, newSize: IntSize ->
+                    val newPosPercentage = newTopLeft.toPercentagePosition(newSize, screenSize)
+                    joystick.freeAreaPosition = newPosPercentage
+
+                    val oldAreaSize = joystick.freeAreaSize
+                    val newAreaSize = when (oldAreaSize.type) {
+                        ButtonSize.Type.Dp -> {
+                            oldAreaSize.copy(
+                                widthDp = with(density) { newSize.width.toDp().value },
+                                heightDp = with(density) { newSize.height.toDp().value }
+                            )
+                        }
+                        ButtonSize.Type.Percentage -> {
+                            val widthRef = if (oldAreaSize.widthReference == ButtonSize.Reference.ScreenWidth) screenSize.width else screenSize.height
+                            val heightRef = if (oldAreaSize.heightReference == ButtonSize.Reference.ScreenWidth) screenSize.width else screenSize.height
+                            oldAreaSize.copy(
+                                widthPercentage = (newSize.width.toFloat() / widthRef * MAX_SIZE_PERCENTAGE).roundToInt().coerceIn(MIN_SIZE_PERCENTAGE, MAX_SIZE_PERCENTAGE),
+                                heightPercentage = (newSize.height.toFloat() / heightRef * MAX_SIZE_PERCENTAGE).roundToInt().coerceIn(MIN_SIZE_PERCENTAGE, MAX_SIZE_PERCENTAGE)
+                            )
+                        }
+                        else -> oldAreaSize
+                    }
+                    joystick.freeAreaSize = newAreaSize
+                }
+
                 val touchOffset = getWidgetPosition(areaPos, freeAreaRenderSize, screenSize)
+
+                // 感应区域移动与缩放手柄
+                val minAreaSizePx = with(density) { MIN_SIZE_DP.dp.toPx() }
+                val handleVisualSize = 14.dp
+                val handleTouchSize = 32.dp
+                val touchSizePx = with(density) { handleTouchSize.toPx() }
+                val visualSizePx = with(density) { handleVisualSize.toPx() }
+
+                // 区域中心/顶部移动手柄（专门用于拖动感应区域，避免覆盖摇杆本体的触摸）
+                val areaTopCenter = Offset(touchOffset.x + freeAreaRenderSize.width / 2f, touchOffset.y)
                 Box(
                     modifier = Modifier
-                        .offset { IntOffset(touchOffset.x.roundToInt(), touchOffset.y.roundToInt()) }
-                        .size(with(density) { freeAreaRenderSize.width.toDp() }, with(density) { freeAreaRenderSize.height.toDp() })
+                        .offset { IntOffset((areaTopCenter.x - touchSizePx / 2).roundToInt(), (areaTopCenter.y - touchSizePx / 2).roundToInt()) }
+                        .size(handleTouchSize)
+                        .drawBehind {
+                            drawCircle(color = primaryColor, radius = visualSizePx / 2, center = center)
+                        }
                         .pointerInput(joystick, screenSize, freeAreaRenderSize) {
                             detectDragGestures(
                                 onDrag = { change, dragAmount ->
@@ -507,7 +628,6 @@ fun ControlEditorLayer(
                                     var newX = cur.x + dragAmount.x
                                     var newY = cur.y + dragAmount.y
 
-                                    // 限制感应区域必须包含摇杆
                                     val minAreaX = maxOf(0f, joystickBR.x - freeAreaRenderSize.width)
                                     val maxAreaX = minOf(screenSize.width.toFloat() - freeAreaRenderSize.width, joystickTL.x)
                                     val minAreaY = maxOf(0f, joystickBR.y - freeAreaRenderSize.height)
@@ -523,14 +643,7 @@ fun ControlEditorLayer(
                         }
                 )
 
-                // 感应区域的缩放手柄（左上角 / 右下角）
-                val minAreaSizePx = with(density) { MIN_SIZE_DP.dp.toPx() }
-                val handleVisualSize = 12.dp
-                val handleTouchSize = 28.dp
-                val touchSizePx = with(density) { handleTouchSize.toPx() }
-                val visualSizePx = with(density) { handleVisualSize.toPx() }
-
-                // 左上角手柄
+                // 左上角缩放手柄
                 Box(
                     modifier = Modifier
                         .offset { IntOffset((touchOffset.x - touchSizePx / 2).roundToInt(), (touchOffset.y - touchSizePx / 2).roundToInt()) }
@@ -548,7 +661,6 @@ fun ControlEditorLayer(
                                 onDrag = { change, dragAmount ->
                                     change.consume()
                                     val newTL = areaTL + dragAmount
-                                    // 限制：左上角不能越过摇杆左上角，也不能超过屏幕
                                     val finalTL = Offset(
                                         newTL.x.coerceIn(0f, minOf(joystickTL.x, areaBR.x - minAreaSizePx)),
                                         newTL.y.coerceIn(0f, minOf(joystickTL.y, areaBR.y - minAreaSizePx))
@@ -561,7 +673,7 @@ fun ControlEditorLayer(
                         }
                 )
 
-                // 右下角手柄
+                // 右下角缩放手柄
                 val brPos = Offset(touchOffset.x + freeAreaRenderSize.width, touchOffset.y + freeAreaRenderSize.height)
                 Box(
                     modifier = Modifier
@@ -580,7 +692,6 @@ fun ControlEditorLayer(
                                 onDrag = { change, dragAmount ->
                                     change.consume()
                                     val newBR = areaBR + dragAmount
-                                    // 限制：右下角不能小于摇杆右下角，也不能超过屏幕
                                     val finalBR = Offset(
                                         newBR.x.coerceIn(maxOf(joystickBR.x, areaTL.x + minAreaSizePx), screenSize.width.toFloat()),
                                         newBR.y.coerceIn(maxOf(joystickBR.y, areaTL.y + minAreaSizePx), screenSize.height.toFloat())
