@@ -148,61 +148,16 @@ fun ControlEditorLayer(
                 }
             }
 
-            //空白可点击层，点击背景清除选中的按钮（或点击自由区域直接选中对应摇杆）
+            //空白可点击层，点击背景清除选中的按钮
             Box(
                 modifier = Modifier
                     .fillMaxSize()
                     .alpha(0f)
-                    .pointerInput(renderingLayers, screenSize) {
-                        androidx.compose.foundation.gestures.detectTapGestures(
-                            onTap = { tapOffset ->
-                                var clickedJoystick: ObservableJoystickData? = null
-                                var clickedLayer: ObservableControlLayer? = null
-
-                                for (layer in renderingLayers) {
-                                    for (joystick in layer.joystickButtons.value) {
-                                        if (joystick.triggerMode == com.movtery.layer_controller.data.JoystickTriggerMode.FREE) {
-                                            val areaPos = joystick.freeAreaPosition
-                                            val areaSize = joystick.freeAreaSize
-                                            val areaWidthPx = when (areaSize.type) {
-                                                ButtonSize.Type.Dp -> with(density) { areaSize.widthDp.dp.toPx() }
-                                                ButtonSize.Type.Percentage -> {
-                                                    val ref = if (areaSize.widthReference == ButtonSize.Reference.ScreenWidth) screenSize.width else screenSize.height
-                                                    ref * (areaSize.widthPercentage / 10000f)
-                                                }
-                                                else -> with(density) { areaSize.widthDp.dp.toPx() }
-                                            }
-                                            val areaHeightPx = when (areaSize.type) {
-                                                ButtonSize.Type.Dp -> with(density) { areaSize.heightDp.dp.toPx() }
-                                                ButtonSize.Type.Percentage -> {
-                                                    val ref = if (areaSize.heightReference == ButtonSize.Reference.ScreenWidth) screenSize.width else screenSize.height
-                                                    ref * (areaSize.heightPercentage / 10000f)
-                                                }
-                                                else -> with(density) { areaSize.heightDp.dp.toPx() }
-                                            }
-                                            val freeAreaRenderSize = IntSize(areaWidthPx.toInt(), areaHeightPx.toInt())
-                                            val areaOffset = getWidgetPosition(areaPos, freeAreaRenderSize, screenSize)
-
-                                            if (tapOffset.x >= areaOffset.x && tapOffset.x <= areaOffset.x + areaWidthPx &&
-                                                tapOffset.y >= areaOffset.y && tapOffset.y <= areaOffset.y + areaHeightPx
-                                            ) {
-                                                clickedJoystick = joystick
-                                                clickedLayer = layer
-                                                break
-                                            }
-                                        }
-                                    }
-                                    if (clickedJoystick != null) break
-                                }
-
-                                if (clickedJoystick != null && clickedLayer != null) {
-                                    onButtonTap(clickedJoystick, clickedLayer)
-                                } else {
-                                    onBackgroundClick()
-                                }
-                            }
-                        )
-                    }
+                    .clickable(
+                        indication = null,
+                        interactionSource = remember { MutableInteractionSource() },
+                        onClick = onBackgroundClick
+                    )
             )
 
             //计算选中控件的像素边界，优先使用拖拽中的实时坐标
