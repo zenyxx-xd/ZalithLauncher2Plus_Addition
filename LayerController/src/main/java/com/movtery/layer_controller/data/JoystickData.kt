@@ -57,6 +57,8 @@ val JOYSTICK_LOCK_THRESHOLD_RANGE: ClosedFloatingPointRange<Float> = 0.0f..1.0f
 /**
  * 自由模式有效半径比例取值范围（相对于摇杆自身大小）
  */
+val JOYSTICK_FREE_RADIUS_RANGE: ClosedFloatingPointRange<Float> = 1.0f..5.0f
+
 /**
  * 自由模式未激活时的不透明度取值范围 (0.0 = 完全透明, 1.0 = 完全不透明)
  */
