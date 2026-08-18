@@ -592,6 +592,7 @@ fun ControlEditorLayer(
                             )
                         }
                 )
+            }
 
             //悬浮功能按钮栏
             selectedWidget?.let {
