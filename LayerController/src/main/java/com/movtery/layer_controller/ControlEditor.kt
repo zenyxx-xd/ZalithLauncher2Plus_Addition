@@ -148,16 +148,57 @@ fun ControlEditorLayer(
                 }
             }
 
-            //空白可点击层，点击背景清除选中的按钮
+            //空白可点击层，点击背景清除选中的按钮或选中自由区域
             Box(
                 modifier = Modifier
                     .fillMaxSize()
                     .alpha(0f)
-                    .clickable(
-                        indication = null,
-                        interactionSource = remember { MutableInteractionSource() },
-                        onClick = onBackgroundClick
-                    )
+                    .pointerInput(renderingLayers, screenSize) {
+                        detectTapGestures(
+                            onTap = { tapOffset ->
+                                // 检查是否点击在某个自由模式摇杆的感应区内
+                                var hitJoystick: Pair<ObservableJoystickData, ObservableControlLayer>? = null
+                                for (layer in renderingLayers) {
+                                    for (joystick in layer.joystickButtons.value) {
+                                        if (joystick.triggerMode == com.movtery.layer_controller.data.JoystickTriggerMode.FREE) {
+                                            val areaPos = joystick.freeAreaPosition
+                                            val areaSize = joystick.freeAreaSize
+                                            val areaWidthPx = when (areaSize.type) {
+                                                ButtonSize.Type.Dp -> with(density) { areaSize.widthDp.dp.toPx() }
+                                                ButtonSize.Type.Percentage -> {
+                                                    val ref = if (areaSize.widthReference == ButtonSize.Reference.ScreenWidth) screenSize.width else screenSize.height
+                                                    ref * (areaSize.widthPercentage / 10000f)
+                                                }
+                                                else -> with(density) { areaSize.widthDp.dp.toPx() }
+                                            }
+                                            val areaHeightPx = when (areaSize.type) {
+                                                ButtonSize.Type.Dp -> with(density) { areaSize.heightDp.dp.toPx() }
+                                                ButtonSize.Type.Percentage -> {
+                                                    val ref = if (areaSize.heightReference == ButtonSize.Reference.ScreenWidth) screenSize.width else screenSize.height
+                                                    ref * (areaSize.heightPercentage / 10000f)
+                                                }
+                                                else -> with(density) { areaSize.heightDp.dp.toPx() }
+                                            }
+                                            val freeAreaRenderSize = IntSize(areaWidthPx.toInt(), areaHeightPx.toInt())
+                                            val areaOffset = getWidgetPosition(areaPos, freeAreaRenderSize, screenSize)
+                                            if (tapOffset.x in areaOffset.x..(areaOffset.x + areaWidthPx) &&
+                                                tapOffset.y in areaOffset.y..(areaOffset.y + areaHeightPx)) {
+                                                hitJoystick = joystick to layer
+                                                break
+                                            }
+                                        }
+                                    }
+                                    if (hitJoystick != null) break
+                                }
+
+                                if (hitJoystick != null) {
+                                    onButtonTap(hitJoystick.first, hitJoystick.second)
+                                } else {
+                                    onBackgroundClick()
+                                }
+                            }
+                        )
+                    }
             )
 
             //计算选中控件的像素边界，优先使用拖拽中的实时坐标
@@ -530,10 +571,10 @@ fun ControlEditorLayer(
                                     var newX = cur.x + dragAmount.x
                                     var newY = cur.y + dragAmount.y
 
-                                    val minAreaX = maxOf(0f, joystickBR.x - freeAreaRenderSize.width)
-                                    val maxAreaX = minOf(screenSize.width.toFloat() - freeAreaRenderSize.width, joystickTL.x)
-                                    val minAreaY = maxOf(0f, joystickBR.y - freeAreaRenderSize.height)
-                                    val maxAreaY = minOf(screenSize.height.toFloat() - freeAreaRenderSize.height, joystickTL.y)
+                                    val minAreaX = 0f
+                                    val maxAreaX = maxOf(0f, screenSize.width.toFloat() - freeAreaRenderSize.width)
+                                    val minAreaY = 0f
+                                    val maxAreaY = maxOf(0f, screenSize.height.toFloat() - freeAreaRenderSize.height)
 
                                     newX = newX.coerceIn(minAreaX, maxAreaX)
                                     newY = newY.coerceIn(minAreaY, maxAreaY)
@@ -564,8 +605,8 @@ fun ControlEditorLayer(
                                     change.consume()
                                     val newTL = areaTL + dragAmount
                                     val finalTL = Offset(
-                                        newTL.x.coerceIn(0f, minOf(joystickTL.x, areaBR.x - minAreaSizePx)),
-                                        newTL.y.coerceIn(0f, minOf(joystickTL.y, areaBR.y - minAreaSizePx))
+                                        newTL.x.coerceIn(0f, areaBR.x - minAreaSizePx),
+                                        newTL.y.coerceIn(0f, areaBR.y - minAreaSizePx)
                                     )
                                     areaTL = finalTL
                                     val finalSize = IntSize((areaBR.x - finalTL.x).roundToInt(), (areaBR.y - finalTL.y).roundToInt())
@@ -595,8 +636,8 @@ fun ControlEditorLayer(
                                     change.consume()
                                     val newBR = areaBR + dragAmount
                                     val finalBR = Offset(
-                                        newBR.x.coerceIn(maxOf(joystickBR.x, areaTL.x + minAreaSizePx), screenSize.width.toFloat()),
-                                        newBR.y.coerceIn(maxOf(joystickBR.y, areaTL.y + minAreaSizePx), screenSize.height.toFloat())
+                                        newBR.x.coerceIn(areaTL.x + minAreaSizePx, screenSize.width.toFloat()),
+                                        newBR.y.coerceIn(areaTL.y + minAreaSizePx, screenSize.height.toFloat())
                                     )
                                     areaBR = finalBR
                                     val finalSize = IntSize((finalBR.x - areaTL.x).roundToInt(), (finalBR.y - areaTL.y).roundToInt())

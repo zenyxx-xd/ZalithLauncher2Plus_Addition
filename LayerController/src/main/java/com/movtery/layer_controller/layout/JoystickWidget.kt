@@ -172,23 +172,18 @@ internal fun JoystickWidgetRenderer(
         }
     }
 
-    // 动画平滑过渡自由模式下的基座移动与透明度变化
+    // 动画平滑过渡自由模式下的透明度变化（松开时不移动到原点，直接原地渐隐为0）
     val animDuration = data.freeAnimationDurationMs.coerceAtLeast(0)
-    val animatedBaseOffset by androidx.compose.animation.core.animateOffsetAsState(
-        targetValue = data.baseOffset,
-        animationSpec = androidx.compose.animation.core.tween(durationMillis = animDuration),
-        label = "JoystickBaseOffset"
-    )
 
     val targetAlphaFactor = if (isEditMode) {
         if (data.triggerMode == com.movtery.layer_controller.data.JoystickTriggerMode.FREE) {
-            maxOf(0.10f, data.freeRestingAlpha)
+            0.0f // 自由模式下编辑器内不显示该固定摇杆，只显示感应区域
         } else {
             1.0f
         }
     } else {
-        if (data.triggerMode == com.movtery.layer_controller.data.JoystickTriggerMode.FREE && !data.isInteracting) {
-            data.freeRestingAlpha
+        if (data.triggerMode == com.movtery.layer_controller.data.JoystickTriggerMode.FREE) {
+            if (data.isInteracting) 1.0f else 0.0f // 游戏内按下显示1.0，松开渐隐为0.0
         } else {
             1.0f
         }
@@ -262,7 +257,7 @@ internal fun JoystickWidgetRenderer(
                     val effectiveLockMarkColor = currentLockMarkColor.copy(alpha = (currentLockMarkColor.alpha * freeAlphaFactor).coerceIn(0f, 1f))
 
                     val bgCenter = if (data.triggerMode == com.movtery.layer_controller.data.JoystickTriggerMode.FREE) {
-                        defaultCenter + animatedBaseOffset
+                        defaultCenter + data.baseOffset
                     } else {
                         defaultCenter
                     }

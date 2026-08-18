@@ -183,6 +183,8 @@ class ObservableJoystickData(data: JoystickData) : ObservableWidget() {
 
     override fun onCheckVisibilityType(): VisibilityType = visibilityType
 
+    override fun canTouch(): Boolean = false
+
     override fun supportsDeepTouchDetection(): Boolean = false
 
     override fun canProcess(): Boolean = false

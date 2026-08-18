@@ -91,81 +91,40 @@ fun EditJoystickConfig(
                     fineTuningStep = 1.0f
                 )
 
-                // 感应区域 尺寸类型
-                val sizeTypes = listOf(com.movtery.layer_controller.data.ButtonSize.Type.Dp, com.movtery.layer_controller.data.ButtonSize.Type.Percentage)
-                InfoLayoutListItem(
-                    modifier = Modifier.fillMaxWidth(),
-                    title = stringResource(R.string.control_editor_edit_joystick_free_size_type),
-                    items = sizeTypes,
-                    selectedItem = data.freeAreaSize.type,
-                    onItemSelected = { data.freeAreaSize = data.freeAreaSize.copy(type = it) },
-                    getItemText = { type ->
-                        val textRes = when (type) {
-                            com.movtery.layer_controller.data.ButtonSize.Type.Dp -> R.string.control_editor_edit_size_type_dp
-                            com.movtery.layer_controller.data.ButtonSize.Type.Percentage -> R.string.control_editor_edit_size_type_percentage
-                            com.movtery.layer_controller.data.ButtonSize.Type.WrapContent -> R.string.control_editor_edit_size_type_wrap_content
-                        }
-                        stringResource(textRes)
-                    }
-                )
-
-                when (data.freeAreaSize.type) {
-                    com.movtery.layer_controller.data.ButtonSize.Type.Dp -> {
-                        InfoLayoutSliderItem(
-                            modifier = Modifier.fillMaxWidth(),
-                            title = stringResource(R.string.control_editor_edit_joystick_free_size_width),
-                            value = data.freeAreaSize.widthDp,
-                            onValueChange = { data.freeAreaSize = data.freeAreaSize.copy(widthDp = it) },
-                            valueRange = 20f..1000f,
-                            decimalFormat = "#0.0",
-                            suffix = "Dp",
-                            fineTuningStep = 5f
-                        )
-                        InfoLayoutSliderItem(
-                            modifier = Modifier.fillMaxWidth(),
-                            title = stringResource(R.string.control_editor_edit_joystick_free_size_height),
-                            value = data.freeAreaSize.heightDp,
-                            onValueChange = { data.freeAreaSize = data.freeAreaSize.copy(heightDp = it) },
-                            valueRange = 20f..1000f,
-                            decimalFormat = "#0.0",
-                            suffix = "Dp",
-                            fineTuningStep = 5f
-                        )
-                    }
-                    com.movtery.layer_controller.data.ButtonSize.Type.Percentage -> {
-                        InfoLayoutSliderItem(
-                            modifier = Modifier.fillMaxWidth(),
-                            title = stringResource(R.string.control_editor_edit_joystick_free_size_width),
-                            value = data.freeAreaSize.widthPercentage / 100f,
-                            onValueChange = { data.freeAreaSize = data.freeAreaSize.copy(widthPercentage = (it * 100).toInt()) },
-                            valueRange = 1f..100f,
-                            decimalFormat = "#0.00",
-                            suffix = "%",
-                            fineTuningStep = 1.0f
-                        )
-                        InfoLayoutSliderItem(
-                            modifier = Modifier.fillMaxWidth(),
-                            title = stringResource(R.string.control_editor_edit_joystick_free_size_height),
-                            value = data.freeAreaSize.heightPercentage / 100f,
-                            onValueChange = { data.freeAreaSize = data.freeAreaSize.copy(heightPercentage = (it * 100).toInt()) },
-                            valueRange = 1f..100f,
-                            decimalFormat = "#0.00",
-                            suffix = "%",
-                            fineTuningStep = 1.0f
-                        )
-                    }
-                    else -> {}
-                }
-
-                // 静止时不透明度
+                // 感应区域 宽度百分比 (0 - 100% экрана)
                 InfoLayoutSliderItem(
                     modifier = Modifier.fillMaxWidth(),
-                    title = stringResource(R.string.control_editor_edit_joystick_free_resting_alpha),
-                    value = data.freeRestingAlpha,
-                    onValueChange = { data.freeRestingAlpha = it },
-                    valueRange = com.movtery.layer_controller.data.JOYSTICK_FREE_RESTING_ALPHA_RANGE,
+                    title = stringResource(R.string.control_editor_edit_joystick_free_size_width),
+                    value = data.freeAreaSize.widthPercentage / 100f,
+                    onValueChange = {
+                        data.freeAreaSize = data.freeAreaSize.copy(
+                            type = com.movtery.layer_controller.data.ButtonSize.Type.Percentage,
+                            widthReference = com.movtery.layer_controller.data.ButtonSize.Reference.ScreenWidth,
+                            widthPercentage = (it * 100).toInt()
+                        )
+                    },
+                    valueRange = 5f..100f,
                     decimalFormat = "#0.00",
-                    fineTuningStep = 0.05f
+                    suffix = "%",
+                    fineTuningStep = 1.0f
+                )
+
+                // 感应区域 高度百分比 (0 - 100% экрана)
+                InfoLayoutSliderItem(
+                    modifier = Modifier.fillMaxWidth(),
+                    title = stringResource(R.string.control_editor_edit_joystick_free_size_height),
+                    value = data.freeAreaSize.heightPercentage / 100f,
+                    onValueChange = {
+                        data.freeAreaSize = data.freeAreaSize.copy(
+                            type = com.movtery.layer_controller.data.ButtonSize.Type.Percentage,
+                            heightReference = com.movtery.layer_controller.data.ButtonSize.Reference.ScreenHeight,
+                            heightPercentage = (it * 100).toInt()
+                        )
+                    },
+                    valueRange = 5f..100f,
+                    decimalFormat = "#0.00",
+                    suffix = "%",
+                    fineTuningStep = 1.0f
                 )
 
                 // 动画过渡时长 (ms)
