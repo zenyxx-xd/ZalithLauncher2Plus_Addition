@@ -220,6 +220,46 @@ fun ControlEditorLayer(
                         style = Stroke(width = 1.dp.toPx())
                     )
                 }
+
+                //当选中的是自由模式摇杆时，在画布上绘制其感应区域边界框
+                (selectedWidget as? ObservableJoystickData)?.takeIf { it.triggerMode == com.movtery.layer_controller.data.JoystickTriggerMode.FREE }?.let { joystick ->
+                    val areaPos = joystick.freeAreaPosition
+                    val areaSize = joystick.freeAreaSize
+                    val areaWidthPx = when (areaSize.type) {
+                        ButtonSize.Type.Dp -> with(density) { areaSize.widthDp.dp.toPx() }
+                        ButtonSize.Type.Percentage -> {
+                            val ref = if (areaSize.widthReference == ButtonSize.Reference.ScreenWidth) screenSize.width else screenSize.height
+                            ref * (areaSize.widthPercentage / 10000f)
+                        }
+                        else -> with(density) { areaSize.widthDp.dp.toPx() }
+                    }
+                    val areaHeightPx = when (areaSize.type) {
+                        ButtonSize.Type.Dp -> with(density) { areaSize.heightDp.dp.toPx() }
+                        ButtonSize.Type.Percentage -> {
+                            val ref = if (areaSize.heightReference == ButtonSize.Reference.ScreenWidth) screenSize.width else screenSize.height
+                            ref * (areaSize.heightPercentage / 10000f)
+                        }
+                        else -> with(density) { areaSize.heightDp.dp.toPx() }
+                    }
+
+                    val freeAreaRenderSize = IntSize(areaWidthPx.toInt(), areaHeightPx.toInt())
+                    val areaOffset = getWidgetPosition(areaPos, freeAreaRenderSize, screenSize)
+
+                    drawRect(
+                        color = primaryColor.copy(alpha = 0.6f),
+                        topLeft = areaOffset,
+                        size = Size(areaWidthPx, areaHeightPx),
+                        style = Stroke(
+                            width = 2.dp.toPx(),
+                            pathEffect = androidx.compose.ui.graphics.PathEffect.dashPathEffect(floatArrayOf(15f, 15f), 0f)
+                        )
+                    )
+                    drawRect(
+                        color = primaryColor.copy(alpha = 0.08f),
+                        topLeft = areaOffset,
+                        size = Size(areaWidthPx, areaHeightPx)
+                    )
+                }
             }
 
             //绘制调整大小的手柄

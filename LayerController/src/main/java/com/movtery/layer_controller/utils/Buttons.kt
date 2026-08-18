@@ -294,9 +294,13 @@ private fun calculateSnapPosition(
 internal fun Modifier.buttonSize(
     data: ObservableWidget,
     screenSize: IntSize
-): Modifier {
-    val size = data.widgetSize
+): Modifier = buttonSize(data.widgetSize, screenSize)
 
+@Composable
+internal fun Modifier.buttonSize(
+    size: ButtonSize,
+    screenSize: IntSize
+): Modifier {
     return this.then(
         when (size.type) {
             ButtonSize.Type.Dp -> Modifier.size(

@@ -82,9 +82,8 @@ class ObservableJoystickData(data: JoystickData) : ObservableWidget() {
     var lockThreshold by mutableFloatStateOf(data.lockThreshold)
     var canLock by mutableStateOf(data.canLock)
     var triggerMode by mutableStateOf(data.triggerMode)
-    var freeRadiusRatio by mutableFloatStateOf(data.freeRadiusRatio)
-    var freeOffsetX by mutableIntStateOf(data.freeOffsetX)
-    var freeOffsetY by mutableIntStateOf(data.freeOffsetY)
+    var freeAreaPosition by mutableStateOf(data.freeAreaPosition)
+    var freeAreaSize by mutableStateOf(data.freeAreaSize)
     var freeRestingAlpha by mutableFloatStateOf(data.freeRestingAlpha)
     var freeAnimationDurationMs by mutableIntStateOf(data.freeAnimationDurationMs)
     var directionEvents by mutableStateOf(data.directionEvents)
@@ -323,6 +322,53 @@ class ObservableJoystickData(data: JoystickData) : ObservableWidget() {
      */
     internal var backgroundRegion: Region = Region()
 
+    /**
+     * 自由模式下的感应区域代理控件（提供给编辑器作为独立控件进行拖动/缩放）
+     */
+    val freeAreaWidget: ObservableWidget = object : ObservableWidget() {
+        override val internalRenderPosition: ButtonPosition
+            get() = freeAreaPosition
+
+        override fun putRenderPosition(position: ButtonPosition) {
+            this@ObservableJoystickData.freeAreaPosition = position
+        }
+
+        override val styleId: String?
+            get() = null
+
+        override val widgetSize: ButtonSize
+            get() = freeAreaSize
+
+        override fun putWidgetSize(size: ButtonSize) {
+            this@ObservableJoystickData.freeAreaSize = size
+        }
+
+        override val behavior: InteractionBehavior
+            get() = InteractionBehavior.Press
+
+        override fun onCompositionStart(eventHandler: EventHandler?) {}
+        override fun onCompositionDispose(eventHandler: EventHandler?) {}
+        override fun onCheckVisibilityType(): VisibilityType = visibilityType
+        override fun supportsDeepTouchDetection(): Boolean = false
+        override fun canProcess(): Boolean = false
+        override fun onTouchEvent(
+            eventHandler: EventHandler,
+            allLayers: List<ObservableControlLayer>,
+            activeWidgets: List<ObservableWidget>,
+            addThis: () -> Unit,
+            consumeEvent: (Boolean) -> Unit
+        ) {}
+        override fun isReleaseOnOutOfBounds(): Boolean = false
+        override fun onPointerBackInBounds(
+            eventHandler: EventHandler,
+            allLayers: List<ObservableControlLayer>
+        ) {}
+        override fun onReleaseEvent(
+            eventHandler: EventHandler,
+            allLayers: List<ObservableControlLayer>
+        ) {}
+    }
+
     override fun Modifier.touchModifier(
         pointerEventBus: PointerEventBus,
         eventHandler: EventHandler,
@@ -343,7 +389,7 @@ class ObservableJoystickData(data: JoystickData) : ObservableWidget() {
 
                         if (activePointer == null) {
                             if (!pointerEventBus.checkOccupiedPointers(pointerId)) {
-                                val pos = change.position
+                                val localPos = change.position
                                 val defaultCenter = Offset(
                                     internalRenderSize.width / 2f,
                                     internalRenderSize.height / 2f
@@ -354,16 +400,27 @@ class ObservableJoystickData(data: JoystickData) : ObservableWidget() {
                                 ) / 2f
 
                                 val isHit = if (triggerMode == JoystickTriggerMode.FREE) {
-                                    val freeRadiusPx = bgRadius * freeRadiusRatio
-                                    val activeAreaCenter = Offset(
-                                        defaultCenter.x + (freeOffsetX / 10000f) * internalRenderSize.width,
-                                        defaultCenter.y + (freeOffsetY / 10000f) * internalRenderSize.height
+                                    val joystickOffset = com.movtery.layer_controller.utils.getWidgetPosition(
+                                        this@ObservableJoystickData,
+                                        internalRenderSize,
+                                        screenSize
                                     )
-                                    val dx = pos.x - activeAreaCenter.x
-                                    val dy = pos.y - activeAreaCenter.y
-                                    (dx * dx + dy * dy) <= (freeRadiusPx * freeRadiusPx)
+                                    val globalTouchPos = joystickOffset + localPos
+                                    val freeAreaRenderSize = freeAreaWidget.internalRenderSize.takeIf { it != IntSize.Zero }
+                                        ?: screenSize
+                                    val freeAreaOffset = com.movtery.layer_controller.utils.getWidgetPosition(
+                                        freeAreaPosition,
+                                        freeAreaRenderSize,
+                                        screenSize
+                                    )
+                                    val areaLeft = freeAreaOffset.x
+                                    val areaTop = freeAreaOffset.y
+                                    val areaRight = freeAreaOffset.x + freeAreaRenderSize.width
+                                    val areaBottom = freeAreaOffset.y + freeAreaRenderSize.height
+
+                                    globalTouchPos.x in areaLeft..areaRight && globalTouchPos.y in areaTop..areaBottom
                                 } else {
-                                    backgroundRegion.contains(pos.x.toInt(), pos.y.toInt())
+                                    backgroundRegion.contains(localPos.x.toInt(), localPos.y.toInt())
                                 }
 
                                 // 命中检测
@@ -372,7 +429,7 @@ class ObservableJoystickData(data: JoystickData) : ObservableWidget() {
                                     activePointer = pointerId
                                     isInteracting = true
                                     onOccupiedPointer(pointerId)
-                                    lastDragPosition = pos
+                                    lastDragPosition = localPos
 
                                     // 如果当前锁定中，解锁
                                     if (isLocked) {
@@ -381,19 +438,12 @@ class ObservableJoystickData(data: JoystickData) : ObservableWidget() {
 
                                     if (triggerMode == JoystickTriggerMode.FREE) {
                                         // 自由模式：将基座中心移动到手指触摸点
-                                        val offsetFromDefault = pos - defaultCenter
-                                        val maxMoveDistance = bgRadius * (freeRadiusRatio - 1f).coerceAtLeast(0f)
-                                        val currentDistance = sqrt(offsetFromDefault.x * offsetFromDefault.x + offsetFromDefault.y * offsetFromDefault.y)
-                                        baseOffset = if (currentDistance > maxMoveDistance && currentDistance > 0f) {
-                                            offsetFromDefault * (maxMoveDistance / currentDistance)
-                                        } else {
-                                            offsetFromDefault
-                                        }
+                                        baseOffset = localPos - defaultCenter
                                         knobOffset = Offset.Zero
                                     } else if (triggerMode == JoystickTriggerMode.TOUCH) {
                                         // 触碰触发时立即更新摇杆状态
                                         updateJoystickState(
-                                            position = pos,
+                                            position = localPos,
                                             centerPoint = defaultCenter,
                                             deadZoneRadius = bgRadius * deadZoneRatio,
                                             lockThresholdPx = bgRadius * lockThreshold,
@@ -496,9 +546,8 @@ class ObservableJoystickData(data: JoystickData) : ObservableWidget() {
             lockThreshold = lockThreshold,
             canLock = canLock,
             triggerMode = triggerMode,
-            freeRadiusRatio = freeRadiusRatio,
-            freeOffsetX = freeOffsetX,
-            freeOffsetY = freeOffsetY,
+            freeAreaPosition = freeAreaPosition,
+            freeAreaSize = freeAreaSize,
             freeRestingAlpha = freeRestingAlpha,
             freeAnimationDurationMs = freeAnimationDurationMs,
             directionEvents = directionEvents,

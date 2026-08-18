@@ -67,41 +67,95 @@ fun EditJoystickConfig(
 
             // 自由模式配置
             if (data.triggerMode == JoystickTriggerMode.FREE) {
-                // 自由模式活动半径 (比例)
+                // 感应区域 X 坐标
                 InfoLayoutSliderItem(
                     modifier = Modifier.fillMaxWidth(),
-                    title = stringResource(R.string.control_editor_edit_joystick_free_radius),
-                    value = data.freeRadiusRatio,
-                    onValueChange = { data.freeRadiusRatio = it },
-                    valueRange = com.movtery.layer_controller.data.JOYSTICK_FREE_RADIUS_RANGE,
-                    decimalFormat = "#0.00",
-                    suffix = "x",
-                    fineTuningStep = 0.1f
-                )
-
-                // 感应区域 X 轴偏移
-                InfoLayoutSliderItem(
-                    modifier = Modifier.fillMaxWidth(),
-                    title = stringResource(R.string.control_editor_edit_joystick_free_offset_x),
-                    value = data.freeOffsetX / 100f,
-                    onValueChange = { data.freeOffsetX = (it * 100).toInt() },
-                    valueRange = -100f..100f,
+                    title = stringResource(R.string.control_editor_edit_joystick_free_pos_x),
+                    value = data.freeAreaPosition.x / 100f,
+                    onValueChange = { data.freeAreaPosition = data.freeAreaPosition.copy(x = (it * 100).toInt()) },
+                    valueRange = 0f..100f,
                     decimalFormat = "#0.00",
                     suffix = "%",
                     fineTuningStep = 1.0f
                 )
 
-                // 感应区域 Y 轴偏移
+                // 感应区域 Y 坐标
                 InfoLayoutSliderItem(
                     modifier = Modifier.fillMaxWidth(),
-                    title = stringResource(R.string.control_editor_edit_joystick_free_offset_y),
-                    value = data.freeOffsetY / 100f,
-                    onValueChange = { data.freeOffsetY = (it * 100).toInt() },
-                    valueRange = -100f..100f,
+                    title = stringResource(R.string.control_editor_edit_joystick_free_pos_y),
+                    value = data.freeAreaPosition.y / 100f,
+                    onValueChange = { data.freeAreaPosition = data.freeAreaPosition.copy(y = (it * 100).toInt()) },
+                    valueRange = 0f..100f,
                     decimalFormat = "#0.00",
                     suffix = "%",
                     fineTuningStep = 1.0f
                 )
+
+                // 感应区域 尺寸类型
+                val sizeTypes = listOf(com.movtery.layer_controller.data.ButtonSize.Type.Dp, com.movtery.layer_controller.data.ButtonSize.Type.Percentage)
+                InfoLayoutListItem(
+                    modifier = Modifier.fillMaxWidth(),
+                    title = stringResource(R.string.control_editor_edit_joystick_free_size_type),
+                    items = sizeTypes,
+                    selectedItem = data.freeAreaSize.type,
+                    onItemSelected = { data.freeAreaSize = data.freeAreaSize.copy(type = it) },
+                    getItemText = { type ->
+                        val textRes = when (type) {
+                            com.movtery.layer_controller.data.ButtonSize.Type.Dp -> R.string.control_editor_edit_size_type_dp
+                            com.movtery.layer_controller.data.ButtonSize.Type.Percentage -> R.string.control_editor_edit_size_type_percentage
+                            com.movtery.layer_controller.data.ButtonSize.Type.WrapContent -> R.string.control_editor_edit_size_type_wrap_content
+                        }
+                        stringResource(textRes)
+                    }
+                )
+
+                when (data.freeAreaSize.type) {
+                    com.movtery.layer_controller.data.ButtonSize.Type.Dp -> {
+                        InfoLayoutSliderItem(
+                            modifier = Modifier.fillMaxWidth(),
+                            title = stringResource(R.string.control_editor_edit_joystick_free_size_width),
+                            value = data.freeAreaSize.widthDp,
+                            onValueChange = { data.freeAreaSize = data.freeAreaSize.copy(widthDp = it) },
+                            valueRange = 20f..1000f,
+                            decimalFormat = "#0.0",
+                            suffix = "Dp",
+                            fineTuningStep = 5f
+                        )
+                        InfoLayoutSliderItem(
+                            modifier = Modifier.fillMaxWidth(),
+                            title = stringResource(R.string.control_editor_edit_joystick_free_size_height),
+                            value = data.freeAreaSize.heightDp,
+                            onValueChange = { data.freeAreaSize = data.freeAreaSize.copy(heightDp = it) },
+                            valueRange = 20f..1000f,
+                            decimalFormat = "#0.0",
+                            suffix = "Dp",
+                            fineTuningStep = 5f
+                        )
+                    }
+                    com.movtery.layer_controller.data.ButtonSize.Type.Percentage -> {
+                        InfoLayoutSliderItem(
+                            modifier = Modifier.fillMaxWidth(),
+                            title = stringResource(R.string.control_editor_edit_joystick_free_size_width),
+                            value = data.freeAreaSize.widthPercentage / 100f,
+                            onValueChange = { data.freeAreaSize = data.freeAreaSize.copy(widthPercentage = (it * 100).toInt()) },
+                            valueRange = 1f..100f,
+                            decimalFormat = "#0.00",
+                            suffix = "%",
+                            fineTuningStep = 1.0f
+                        )
+                        InfoLayoutSliderItem(
+                            modifier = Modifier.fillMaxWidth(),
+                            title = stringResource(R.string.control_editor_edit_joystick_free_size_height),
+                            value = data.freeAreaSize.heightPercentage / 100f,
+                            onValueChange = { data.freeAreaSize = data.freeAreaSize.copy(heightPercentage = (it * 100).toInt()) },
+                            valueRange = 1f..100f,
+                            decimalFormat = "#0.00",
+                            suffix = "%",
+                            fineTuningStep = 1.0f
+                        )
+                    }
+                    else -> {}
+                }
 
                 // 静止时不透明度
                 InfoLayoutSliderItem(

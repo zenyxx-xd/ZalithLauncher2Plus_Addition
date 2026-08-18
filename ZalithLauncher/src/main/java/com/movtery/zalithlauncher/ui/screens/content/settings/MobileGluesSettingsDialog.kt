@@ -60,27 +60,27 @@ fun MobileGluesSettingsDialog(onDismissRequest: () -> Unit) {
             "enableANGLE", "enableNoError", "enableExtTimerQuery",
             "enableExtComputeShader", "enableExtDirectStateAccess",
             "maxGlslCacheSize", "multidrawMode", "angleDepthClearFixMode",
-            "customGLVersion", "fsr1Setting"
+            "maxGlslCacheSize", "angleDepthClearFixMode",
+            "customGLVersion", "fsr1"
         )
     }
 
     var enableANGLE by remember { mutableIntStateOf(config.get("enableANGLE", 1)) }
     var enableNoError by remember { mutableIntStateOf(config.get("enableNoError", 0)) }
-    var enableExtTimerQuery by remember { mutableStateOf(config.get("enableExtTimerQuery", 1) == 0) }
+    var enableExtTimerQuery by remember { mutableStateOf(config.get("enableExtTimerQuery", 0) == 1) }
     var enableExtComputeShader by remember { mutableStateOf(config.get("enableExtComputeShader", 0) == 1) }
     var enableExtDirectStateAccess by remember { mutableStateOf(config.get("enableExtDirectStateAccess", 0) == 1) }
     var maxGlslCacheSize by remember { mutableStateOf(config.get("maxGlslCacheSize", 32).toString()) }
-    var multidrawMode by remember { mutableIntStateOf(config.get("multidrawMode", 0)) }
     var angleDepthClearFixMode by remember { mutableIntStateOf(config.get("angleDepthClearFixMode", 0)) }
     var customGLVersion by remember { mutableIntStateOf(config.get("customGLVersion", 0)) }
-    var fsr1Setting by remember { mutableIntStateOf(config.get("fsr1Setting", 0)) }
+    var fsr1 by remember { mutableStateOf(config.get("fsr1", 0) == 1) }
 
     val unknownKeys = remember(config) {
         val known = setOf(
             "enableANGLE", "enableNoError", "enableExtTimerQuery",
             "enableExtComputeShader", "enableExtDirectStateAccess",
-            "maxGlslCacheSize", "multidrawMode", "angleDepthClearFixMode",
-            "customGLVersion", "fsr1Setting"
+            "maxGlslCacheSize", "angleDepthClearFixMode",
+            "customGLVersion", "fsr1"
         )
         config.allKeys.filter { it !in known }
     }
@@ -150,14 +150,13 @@ fun MobileGluesSettingsDialog(onDismissRequest: () -> Unit) {
                         onClick = {
                             config.set("enableANGLE", enableANGLE)
                             config.set("enableNoError", enableNoError)
-                            config.set("enableExtTimerQuery", if (enableExtTimerQuery) 0 else 1)
+                            config.set("enableExtTimerQuery", if (enableExtTimerQuery) 1 else 0)
                             config.set("enableExtComputeShader", if (enableExtComputeShader) 1 else 0)
                             config.set("enableExtDirectStateAccess", if (enableExtDirectStateAccess) 1 else 0)
                             config.set("maxGlslCacheSize", maxGlslCacheSize.toIntOrNull() ?: 32)
-                            config.set("multidrawMode", multidrawMode)
                             config.set("angleDepthClearFixMode", angleDepthClearFixMode)
                             config.set("customGLVersion", customGLVersion)
-                            config.set("fsr1Setting", fsr1Setting)
+                            config.set("fsr1", if (fsr1) 1 else 0)
                             unknownValues.forEach { (k, v) -> config.set(k, v) }
                             config.save()
                             Toast.makeText(context, context.getString(R.string.mobileglues_saved_toast), Toast.LENGTH_SHORT).show()
@@ -190,16 +189,6 @@ fun MobileGluesSettingsDialog(onDismissRequest: () -> Unit) {
                         onValueChange = { enableANGLE = it }
                     )
 
-                    NoErrorPicker(
-                        value = enableNoError,
-                        onValueChange = { enableNoError = it }
-                    )
-
-                    MultidrawModeSegmented(
-                        value = multidrawMode,
-                        onValueChange = { multidrawMode = it }
-                    )
-
                     AngleClearPicker(
                         value = angleDepthClearFixMode,
                         onValueChange = { angleDepthClearFixMode = it }
@@ -211,9 +200,20 @@ fun MobileGluesSettingsDialog(onDismissRequest: () -> Unit) {
                         onValueChange = { customGLVersion = it }
                     )
 
-                    Fsr1Picker(
-                        value = fsr1Setting,
-                        onValueChange = { fsr1Setting = it }
+                    SettingsSwitchRow(
+                        title = stringResource(R.string.mobileglues_fsr1),
+                        summary = stringResource(R.string.mobileglues_fsr1_summary),
+                        checked = fsr1,
+                        onCheckedChange = { fsr1 = it }
+                    )
+
+                    HorizontalDivider()
+
+                    SectionHeader(stringResource(R.string.mobileglues_section_advanced))
+
+                    NoErrorPicker(
+                        value = enableNoError,
+                        onValueChange = { enableNoError = it }
                     )
 
                     HorizontalDivider()
@@ -280,14 +280,13 @@ fun MobileGluesSettingsDialog(onDismissRequest: () -> Unit) {
                 Button(onClick = {
                     enableANGLE = 1
                     enableNoError = 0
-                    enableExtTimerQuery = true
-                    enableExtComputeShader = true
-                    enableExtDirectStateAccess = true
+                    enableExtTimerQuery = false
+                    enableExtComputeShader = false
+                    enableExtDirectStateAccess = false
                     maxGlslCacheSize = "32"
-                    multidrawMode = 0
                     angleDepthClearFixMode = 0
                     customGLVersion = 0
-                    fsr1Setting = 0
+                    fsr1 = false
                     unknownValues = unknownKeys.associateWith { 0 }
                     showResetConfirm = false
                 }) {
@@ -356,9 +355,9 @@ private fun ANGLEPicker(value: Int, onValueChange: (Int) -> Unit) {
     val disable = stringResource(R.string.mobileglues_angle_disable)
     val auto = stringResource(R.string.mobileglues_angle_auto)
     val force = stringResource(R.string.mobileglues_angle_force)
-    val compatible = stringResource(R.string.mobileglues_angle_compatible)
-    val options = remember(disable, auto, force, compatible) {
-        listOf(disable to 0, auto to 1, force to 2, compatible to 3)
+    val disableIfPossible = stringResource(R.string.mobileglues_angle_disable_if_possible)
+    val options = remember(disable, auto, force, disableIfPossible) {
+        listOf(disable to 0, auto to 1, force to 2, disableIfPossible to 3)
     }
     DropdownSettingRow(
         label = stringResource(R.string.mobileglues_angle_mode),
@@ -370,12 +369,12 @@ private fun ANGLEPicker(value: Int, onValueChange: (Int) -> Unit) {
 
 @Composable
 private fun NoErrorPicker(value: Int, onValueChange: (Int) -> Unit) {
-    val strict = stringResource(R.string.mobileglues_no_error_strict)
-    val moderate = stringResource(R.string.mobileglues_no_error_moderate)
-    val relaxed = stringResource(R.string.mobileglues_no_error_relaxed)
-    val ignoreAll = stringResource(R.string.mobileglues_no_error_ignore_all)
-    val options = remember(strict, moderate, relaxed, ignoreAll) {
-        listOf(strict to 0, moderate to 1, relaxed to 2, ignoreAll to 3)
+    val auto = stringResource(R.string.mobileglues_no_error_auto)
+    val enable = stringResource(R.string.mobileglues_no_error_enable)
+    val disablePri = stringResource(R.string.mobileglues_no_error_disable_pri)
+    val disableSec = stringResource(R.string.mobileglues_no_error_disable_sec)
+    val options = remember(auto, enable, disablePri, disableSec) {
+        listOf(auto to 0, enable to 1, disablePri to 2, disableSec to 3)
     }
     DropdownSettingRow(
         label = stringResource(R.string.mobileglues_no_error_mode),
@@ -386,34 +385,11 @@ private fun NoErrorPicker(value: Int, onValueChange: (Int) -> Unit) {
 }
 
 @Composable
-private fun MultidrawModeSegmented(value: Int, onValueChange: (Int) -> Unit) {
-    Text(stringResource(R.string.mobileglues_multidraw_mode), style = MaterialTheme.typography.bodyMedium)
-    Spacer(modifier = Modifier.height(4.dp))
-    val auto = stringResource(R.string.mobileglues_multidraw_auto)
-    val baseVertex = stringResource(R.string.mobileglues_multidraw_basevertex)
-    val compute = stringResource(R.string.mobileglues_multidraw_compute)
-    val options = remember(auto, baseVertex, compute) {
-        listOf(auto to 0, baseVertex to 1, compute to 2)
-    }
-    SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
-        options.forEachIndexed { index, (label, v) ->
-            SegmentedButton(
-                selected = value == v,
-                onClick = { onValueChange(v) },
-                shape = SegmentedButtonDefaults.itemShape(index = index, count = 3),
-                label = { Text(label) }
-            )
-        }
-    }
-}
-
-@Composable
 private fun AngleClearPicker(value: Int, onValueChange: (Int) -> Unit) {
     val off = stringResource(R.string.mobileglues_angle_clear_off)
     val mode1 = stringResource(R.string.mobileglues_angle_clear_mode1)
-    val mode2 = stringResource(R.string.mobileglues_angle_clear_mode2)
-    val options = remember(off, mode1, mode2) {
-        listOf(off to 0, mode1 to 1, mode2 to 2)
+    val options = remember(off, mode1) {
+        listOf(off to 0, mode1 to 1)
     }
     DropdownSettingRow(
         label = stringResource(R.string.mobileglues_angle_depth_clear_fix),
@@ -510,28 +486,4 @@ private fun DropdownSettingRow(
             }
         }
     }
-}
-
-@Composable
-private fun Fsr1Picker(value: Int, onValueChange: (Int) -> Unit) {
-    val disabled = stringResource(R.string.mobileglues_fsr1_disabled)
-    val ultraQuality = stringResource(R.string.mobileglues_fsr1_ultra_quality)
-    val quality = stringResource(R.string.mobileglues_fsr1_quality)
-    val balanced = stringResource(R.string.mobileglues_fsr1_balanced)
-    val performance = stringResource(R.string.mobileglues_fsr1_performance)
-    val options = remember(disabled, ultraQuality, quality, balanced, performance) {
-        listOf(
-            disabled to 0,
-            ultraQuality to 1,
-            quality to 2,
-            balanced to 3,
-            performance to 4
-        )
-    }
-    DropdownSettingRow(
-        label = stringResource(R.string.mobileglues_fsr1),
-        options = options,
-        selectedValue = value,
-        onValueChange = onValueChange
-    )
 }
