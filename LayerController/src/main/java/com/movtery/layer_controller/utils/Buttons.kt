@@ -124,8 +124,45 @@ internal fun Modifier.editMode(
                             val maxX = screenSize1.width.toFloat() - widgetSize.width
                             val maxY = screenSize1.height.toFloat() - widgetSize.height
 
-                            newX = newX.coerceIn(0f, maxX)
-                            newY = newY.coerceIn(0f, maxY)
+                            var minClampX = 0f
+                            var maxClampX = maxX
+                            var minClampY = 0f
+                            var maxClampY = maxY
+
+                            // 自由模式摇杆及其感应区域的相互边界约束：
+                            if (data is com.movtery.layer_controller.observable.ObservableJoystickData && data.triggerMode == com.movtery.layer_controller.data.JoystickTriggerMode.FREE) {
+                                // 限制摇杆本体不能被拖出感应区域外（摇杆中心或全部边界位于感应区域内）
+                                val areaPos = data.freeAreaPosition
+                                val areaSize = data.freeAreaSize
+                                val areaWidthPx = when (areaSize.type) {
+                                    ButtonSize.Type.Dp -> with(density) { areaSize.widthDp.dp.toPx() }
+                                    ButtonSize.Type.Percentage -> {
+                                        val ref = if (areaSize.widthReference == ButtonSize.Reference.ScreenWidth) screenSize1.width else screenSize1.height
+                                        ref * (areaSize.widthPercentage / 10000f)
+                                    }
+                                    else -> with(density) { areaSize.widthDp.dp.toPx() }
+                                }
+                                val areaHeightPx = when (areaSize.type) {
+                                    ButtonSize.Type.Dp -> with(density) { areaSize.heightDp.dp.toPx() }
+                                    ButtonSize.Type.Percentage -> {
+                                        val ref = if (areaSize.heightReference == ButtonSize.Reference.ScreenWidth) screenSize1.width else screenSize1.height
+                                        ref * (areaSize.heightPercentage / 10000f)
+                                    }
+                                    else -> with(density) { areaSize.heightDp.dp.toPx() }
+                                }
+                                val areaOffset = getWidgetPosition(areaPos, IntSize(areaWidthPx.toInt(), areaHeightPx.toInt()), screenSize1)
+
+                                minClampX = maxOf(0f, areaOffset.x)
+                                maxClampX = minOf(maxX, areaOffset.x + areaWidthPx - widgetSize.width)
+                                minClampY = maxOf(0f, areaOffset.y)
+                                maxClampY = minOf(maxY, areaOffset.y + areaHeightPx - widgetSize.height)
+
+                                if (minClampX > maxClampX) { minClampX = areaOffset.x; maxClampX = areaOffset.x }
+                                if (minClampY > maxClampY) { minClampY = areaOffset.y; maxClampY = areaOffset.y }
+                            }
+
+                            newX = newX.coerceIn(minClampX, maxClampX)
+                            newY = newY.coerceIn(minClampY, maxClampY)
 
                             val newPosition = Offset(newX, newY).also { data.movingOffset = it }
 

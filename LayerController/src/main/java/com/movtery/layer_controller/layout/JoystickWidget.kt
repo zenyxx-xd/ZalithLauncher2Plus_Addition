@@ -181,7 +181,7 @@ internal fun JoystickWidgetRenderer(
     )
 
     val targetAlphaFactor = if (data.triggerMode == com.movtery.layer_controller.data.JoystickTriggerMode.FREE && !data.isInteracting) {
-        data.freeRestingAlpha
+        maxOf(0.10f, data.freeRestingAlpha)
     } else {
         1.0f
     }
