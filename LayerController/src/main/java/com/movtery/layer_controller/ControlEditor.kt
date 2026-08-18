@@ -137,13 +137,23 @@ fun ControlEditorLayer(
             /** 拖动中的右下角的手柄位置 BottomRight */
             var dragBR by remember { mutableStateOf(Offset.Zero) }
 
+            val density = LocalDensity.current
+            val screenSize = remember(maxWidth, maxHeight) {
+                with(density) {
+                    IntSize(
+                        width = maxWidth.roundToPx(),
+                        height = maxHeight.roundToPx()
+                    )
+                }
+            }
+
             //空白可点击层，点击背景清除选中的按钮（或点击自由区域直接选中对应摇杆）
             Box(
                 modifier = Modifier
                     .fillMaxSize()
                     .alpha(0f)
                     .pointerInput(renderingLayers, screenSize) {
-                        detectTapGestures(
+                        androidx.compose.foundation.gestures.detectTapGestures(
                             onTap = { tapOffset ->
                                 var clickedJoystick: ObservableJoystickData? = null
                                 var clickedLayer: ObservableControlLayer? = null
@@ -193,16 +203,6 @@ fun ControlEditorLayer(
                         )
                     }
             )
-
-            val density = LocalDensity.current
-            val screenSize = remember(maxWidth, maxHeight) {
-                with(density) {
-                    IntSize(
-                        width = maxWidth.roundToPx(),
-                        height = maxHeight.roundToPx()
-                    )
-                }
-            }
 
             //计算选中控件的像素边界，优先使用拖拽中的实时坐标
             val selectedWidgetBounds by remember(
