@@ -249,8 +249,10 @@ fun ControlEditorLayer(
                     }
                 }
 
-                //绘制选中控件的红色方框
-                selectedWidgetBounds?.let { (drawTL, drawBR) ->
+                //绘制选中控件的红色方框 (自由模式摇杆只显示感应区域，不显示自身的红色选中方框)
+                selectedWidgetBounds?.takeIf {
+                    (selectedWidget as? ObservableJoystickData)?.triggerMode != com.movtery.layer_controller.data.JoystickTriggerMode.FREE
+                }?.let { (drawTL, drawBR) ->
                     //稍微留出点空隙
                     val padding = 4.dp.toPx()
                     drawRect(
@@ -315,8 +317,9 @@ fun ControlEditorLayer(
 
             //绘制调整大小的手柄
             selectedWidget?.takeIf { widget ->
-                //控件的大小类型为包裹内容时，调整大小是无意义的
-                widget.widgetSize.type != ButtonSize.Type.WrapContent
+                //控件的大小类型为包裹内容时，调整大小是无意义的；自由模式摇杆使用自己的感应区手柄
+                widget.widgetSize.type != ButtonSize.Type.WrapContent &&
+                        (widget as? ObservableJoystickData)?.triggerMode != com.movtery.layer_controller.data.JoystickTriggerMode.FREE
             }?.let { widget ->
                 selectedWidgetBounds?.let { (drawTL, drawBR) ->
                     //获取尺寸约束的像素值

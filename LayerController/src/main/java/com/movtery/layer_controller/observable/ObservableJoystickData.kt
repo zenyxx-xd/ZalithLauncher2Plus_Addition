@@ -136,29 +136,39 @@ class ObservableJoystickData(data: JoystickData) : ObservableWidget() {
         get() = InteractionBehavior.Press
 
     override val internalRenderPosition: ButtonPosition
-        get() = position
+        get() = if (triggerMode == JoystickTriggerMode.FREE) freeAreaPosition else position
 
     override fun putRenderPosition(position: ButtonPosition) {
-        this.position = position
-    }
-
-    override fun putWidgetSize(size: ButtonSize) {
-        this.sizeDp = size.widthDp
-        this.sizePercentage = size.widthPercentage
-        this.sizeType = size.type
+        if (triggerMode == JoystickTriggerMode.FREE) {
+            freeAreaPosition = position
+        } else {
+            this.position = position
+        }
     }
 
     override val styleId: String?
         get() = joystickStyleId
 
     override val widgetSize: ButtonSize
-        get() = JoystickData(
-            uuid = uuid,
-            position = position,
-            sizeType = sizeType,
-            sizeDp = sizeDp,
-            sizePercentage = sizePercentage
-        ).toButtonSize()
+        get() = if (triggerMode == JoystickTriggerMode.FREE) freeAreaSize else ButtonSize(
+            type = sizeType,
+            widthDp = sizeDp,
+            heightDp = sizeDp,
+            widthPercentage = sizePercentage,
+            heightPercentage = sizePercentage,
+            widthReference = ButtonSize.Reference.ScreenHeight,
+            heightReference = ButtonSize.Reference.ScreenHeight
+        )
+
+    override fun putWidgetSize(size: ButtonSize) {
+        if (triggerMode == JoystickTriggerMode.FREE) {
+            freeAreaSize = size
+        } else {
+            sizeType = size.type
+            sizeDp = size.widthDp
+            sizePercentage = size.widthPercentage
+        }
+    }
 
     override fun onCompositionStart(eventHandler: EventHandler?) {}
 
@@ -392,50 +402,49 @@ class ObservableJoystickData(data: JoystickData) : ObservableWidget() {
                         if (activePointer == null) {
                             if (!pointerEventBus.checkOccupiedPointers(pointerId)) {
                                 val localPos = change.position
+                                val joystickSize = if (triggerMode == JoystickTriggerMode.FREE) {
+                                    val jSize = ButtonSize(
+                                        type = sizeType,
+                                        widthDp = sizeDp,
+                                        heightDp = sizeDp,
+                                        widthPercentage = sizePercentage,
+                                        heightPercentage = sizePercentage,
+                                        widthReference = ButtonSize.Reference.ScreenHeight,
+                                        heightReference = ButtonSize.Reference.ScreenHeight
+                                    )
+                                    val wPx = when (jSize.type) {
+                                        ButtonSize.Type.Dp -> density.run { jSize.widthDp.toDp().toPx() }
+                                        ButtonSize.Type.Percentage -> {
+                                            val ref = if (jSize.widthReference == ButtonSize.Reference.ScreenWidth) screenSize.width else screenSize.height
+                                            ref * (jSize.widthPercentage / 10000f)
+                                        }
+                                        else -> density.run { jSize.widthDp.toDp().toPx() }
+                                    }
+                                    val hPx = when (jSize.type) {
+                                        ButtonSize.Type.Dp -> density.run { jSize.heightDp.toDp().toPx() }
+                                        ButtonSize.Type.Percentage -> {
+                                            val ref = if (jSize.heightReference == ButtonSize.Reference.ScreenWidth) screenSize.width else screenSize.height
+                                            ref * (jSize.heightPercentage / 10000f)
+                                        }
+                                        else -> density.run { jSize.heightDp.toDp().toPx() }
+                                    }
+                                    Size(wPx, hPx)
+                                } else {
+                                    Size(internalRenderSize.width.toFloat(), internalRenderSize.height.toFloat())
+                                }
+
                                 val defaultCenter = Offset(
                                     internalRenderSize.width / 2f,
                                     internalRenderSize.height / 2f
                                 )
                                 val bgRadius = minOf(
-                                    internalRenderSize.width,
-                                    internalRenderSize.height
+                                    joystickSize.width,
+                                    joystickSize.height
                                 ) / 2f
 
                                 val isHit = if (triggerMode == JoystickTriggerMode.FREE) {
-                                    val joystickOffset = com.movtery.layer_controller.utils.getWidgetPosition(
-                                        this@ObservableJoystickData,
-                                        internalRenderSize,
-                                        screenSize
-                                    )
-                                    val globalTouchPos = joystickOffset + localPos
-                                    val areaWidthPx = when (freeAreaSize.type) {
-                                        ButtonSize.Type.Dp -> density.run { freeAreaSize.widthDp.toDp().toPx() }
-                                        ButtonSize.Type.Percentage -> {
-                                            val ref = if (freeAreaSize.widthReference == ButtonSize.Reference.ScreenWidth) screenSize.width else screenSize.height
-                                            ref * (freeAreaSize.widthPercentage / 10000f)
-                                        }
-                                        else -> density.run { freeAreaSize.widthDp.toDp().toPx() }
-                                    }
-                                    val areaHeightPx = when (freeAreaSize.type) {
-                                        ButtonSize.Type.Dp -> density.run { freeAreaSize.heightDp.toDp().toPx() }
-                                        ButtonSize.Type.Percentage -> {
-                                            val ref = if (freeAreaSize.heightReference == ButtonSize.Reference.ScreenWidth) screenSize.width else screenSize.height
-                                            ref * (freeAreaSize.heightPercentage / 10000f)
-                                        }
-                                        else -> density.run { freeAreaSize.heightDp.toDp().toPx() }
-                                    }
-                                    val freeAreaRenderSize = IntSize(areaWidthPx.toInt(), areaHeightPx.toInt())
-                                    val freeAreaOffset = com.movtery.layer_controller.utils.getWidgetPosition(
-                                        freeAreaPosition,
-                                        freeAreaRenderSize,
-                                        screenSize
-                                    )
-                                    val areaLeft = freeAreaOffset.x
-                                    val areaTop = freeAreaOffset.y
-                                    val areaRight = freeAreaOffset.x + freeAreaRenderSize.width
-                                    val areaBottom = freeAreaOffset.y + freeAreaRenderSize.height
-
-                                    globalTouchPos.x in areaLeft..areaRight && globalTouchPos.y in areaTop..areaBottom
+                                    localPos.x in 0f..internalRenderSize.width.toFloat() &&
+                                            localPos.y in 0f..internalRenderSize.height.toFloat()
                                 } else {
                                     backgroundRegion.contains(localPos.x.toInt(), localPos.y.toInt())
                                 }
@@ -478,11 +487,47 @@ class ObservableJoystickData(data: JoystickData) : ObservableWidget() {
                         .firstOrNull { it.id == pointerId && it.positionChanged() && !it.isConsumed }
                         ?.let { moveChange ->
                             val localPos = moveChange.position
+                            val joystickSize = if (triggerMode == JoystickTriggerMode.FREE) {
+                                val jSize = ButtonSize(
+                                    type = sizeType,
+                                    widthDp = sizeDp,
+                                    heightDp = sizeDp,
+                                    widthPercentage = sizePercentage,
+                                    heightPercentage = sizePercentage,
+                                    widthReference = ButtonSize.Reference.ScreenHeight,
+                                    heightReference = ButtonSize.Reference.ScreenHeight
+                                )
+                                val wPx = when (jSize.type) {
+                                    ButtonSize.Type.Dp -> density.run { jSize.widthDp.toDp().toPx() }
+                                    ButtonSize.Type.Percentage -> {
+                                        val ref = if (jSize.widthReference == ButtonSize.Reference.ScreenWidth) screenSize.width else screenSize.height
+                                        ref * (jSize.widthPercentage / 10000f)
+                                    }
+                                    else -> density.run { jSize.widthDp.toDp().toPx() }
+                                }
+                                val hPx = when (jSize.type) {
+                                    ButtonSize.Type.Dp -> density.run { jSize.heightDp.toDp().toPx() }
+                                    ButtonSize.Type.Percentage -> {
+                                        val ref = if (jSize.heightReference == ButtonSize.Reference.ScreenWidth) screenSize.width else screenSize.height
+                                        ref * (jSize.heightPercentage / 10000f)
+                                    }
+                                    else -> density.run { jSize.heightDp.toDp().toPx() }
+                                }
+                                Size(wPx, hPx)
+                            } else {
+                                Size(internalRenderSize.width.toFloat(), internalRenderSize.height.toFloat())
+                            }
+
                             val defaultCenter = Offset(
                                 internalRenderSize.width / 2f,
                                 internalRenderSize.height / 2f
                             )
-                            val bgRadius = minOf(internalRenderSize.width, internalRenderSize.height) / 2f
+                            val effectiveCenter = if (triggerMode == JoystickTriggerMode.FREE) {
+                                defaultCenter + baseOffset
+                            } else {
+                                defaultCenter
+                            }
+                            val bgRadius = minOf(joystickSize.width, joystickSize.height) / 2f
                             val deadZoneRadius = bgRadius * deadZoneRatio
                             val lockThresholdPx = bgRadius * lockThreshold
 
@@ -492,7 +537,7 @@ class ObservableJoystickData(data: JoystickData) : ObservableWidget() {
 
                             updateJoystickState(
                                 position = localPos,
-                                centerPoint = defaultCenter,
+                                centerPoint = effectiveCenter,
                                 deadZoneRadius = deadZoneRadius,
                                 lockThresholdPx = lockThresholdPx,
                                 eventHandler = eventHandler

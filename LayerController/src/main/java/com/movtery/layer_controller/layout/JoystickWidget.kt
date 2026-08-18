@@ -195,13 +195,16 @@ internal fun JoystickWidgetRenderer(
     )
 
     if (visible) {
+        val isFreeMode = data.triggerMode == com.movtery.layer_controller.data.JoystickTriggerMode.FREE
+        val activeSize = if (isFreeMode) data.freeAreaSize else data.widgetSize
+
         Box(
             modifier = Modifier
                 .onSizeChanged { size ->
                     currentSize = size
                     if (size != IntSize.Zero) {
-                        // 计算并设置背景区域
-                        val sizePx = Size(size.width.toFloat(), size.height.toFloat())
+                        val joystickRenderSize = data.internalRenderSize.takeIf { it != IntSize.Zero } ?: size
+                        val sizePx = Size(joystickRenderSize.width.toFloat(), joystickRenderSize.height.toFloat())
                         data.backgroundRegion = backgroundShape.toRegion(
                             size = sizePx,
                             density = density,
@@ -211,22 +214,26 @@ internal fun JoystickWidgetRenderer(
                         initialized = true
                     }
                 }
-                .buttonSize(data, screenSize)
+                .buttonSize(activeSize, screenSize)
                 .let { modifier ->
                     if (isEditMode) {
-                        modifier.editMode(
-                            isEditMode = true,
-                            data = data,
-                            screenSize = screenSize,
-                            enableSnap = enableSnap,
-                            snapMode = snapMode,
-                            localSnapRange = localSnapRange,
-                            getOtherWidgets = getOtherWidgets,
-                            snapThresholdValue = snapThresholdValue,
-                            drawLine = drawLine,
-                            onLineCancel = onLineCancel,
-                            onTapInEditMode = onTapInEditMode ?: {}
-                        )
+                        if (isFreeMode) {
+                            modifier // В режиме редактирования Free-джойстик обрабатывается через оверлей зоны
+                        } else {
+                            modifier.editMode(
+                                isEditMode = true,
+                                data = data,
+                                screenSize = screenSize,
+                                enableSnap = enableSnap,
+                                snapMode = snapMode,
+                                localSnapRange = localSnapRange,
+                                getOtherWidgets = getOtherWidgets,
+                                snapThresholdValue = snapThresholdValue,
+                                drawLine = drawLine,
+                                onLineCancel = onLineCancel,
+                                onTapInEditMode = onTapInEditMode ?: {}
+                            )
+                        }
                     } else if (pointerEventBus != null && eventHandler != null && reversedLayers != null) {
                         with(data) {
                             modifier.touchModifier(
@@ -244,7 +251,30 @@ internal fun JoystickWidgetRenderer(
         ) {
             Canvas(modifier = Modifier.fillMaxSize()) {
                 if (initialized) {
-                    val minSide = minOf(size.width, size.height)
+                    val joystickRenderSize = if (isFreeMode) {
+                        val jSize = data.widgetSize
+                        val widthPx = when (jSize.type) {
+                            ButtonSize.Type.Dp -> density.run { jSize.widthDp.toDp().toPx() }
+                            ButtonSize.Type.Percentage -> {
+                                val ref = if (jSize.widthReference == ButtonSize.Reference.ScreenWidth) screenSize.width else screenSize.height
+                                ref * (jSize.widthPercentage / 10000f)
+                            }
+                            else -> density.run { jSize.widthDp.toDp().toPx() }
+                        }
+                        val heightPx = when (jSize.type) {
+                            ButtonSize.Type.Dp -> density.run { jSize.heightDp.toDp().toPx() }
+                            ButtonSize.Type.Percentage -> {
+                                val ref = if (jSize.heightReference == ButtonSize.Reference.ScreenWidth) screenSize.width else screenSize.height
+                                ref * (jSize.heightPercentage / 10000f)
+                            }
+                            else -> density.run { jSize.heightDp.toDp().toPx() }
+                        }
+                        Size(widthPx, heightPx)
+                    } else {
+                        Size(size.width, size.height)
+                    }
+
+                    val minSide = minOf(joystickRenderSize.width, joystickRenderSize.height)
                     val defaultCenter = Offset(size.width / 2f, size.height / 2f)
 
                     val freeAlphaFactor = animatedAlphaFactor
@@ -256,7 +286,7 @@ internal fun JoystickWidgetRenderer(
                     val effectiveJoystickLockedColor = currentJoystickLockedColor.copy(alpha = (currentJoystickLockedColor.alpha * freeAlphaFactor).coerceIn(0f, 1f))
                     val effectiveLockMarkColor = currentLockMarkColor.copy(alpha = (currentLockMarkColor.alpha * freeAlphaFactor).coerceIn(0f, 1f))
 
-                    val bgCenter = if (data.triggerMode == com.movtery.layer_controller.data.JoystickTriggerMode.FREE) {
+                    val bgCenter = if (isFreeMode) {
                         defaultCenter + data.baseOffset
                     } else {
                         defaultCenter
@@ -266,7 +296,7 @@ internal fun JoystickWidgetRenderer(
                         // 背景层
                         drawBackgroundLayer(
                             layoutDirection = layoutDirection,
-                            size = Size(size.width, size.height),
+                            size = joystickRenderSize,
                             shape = backgroundShape,
                             backgroundColor = effectiveBgColor,
                             borderColor = effectiveBorderColor,
