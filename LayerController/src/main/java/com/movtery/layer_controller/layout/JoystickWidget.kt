@@ -177,11 +177,7 @@ internal fun JoystickWidgetRenderer(
     val animDuration = data.freeAnimationDurationMs.coerceAtLeast(0)
 
     val targetAlphaFactor = if (isEditMode) {
-        if (data.triggerMode == com.movtery.layer_controller.data.JoystickTriggerMode.FREE) {
-            0.0f // 自由模式下编辑器内不显示该固定摇杆，只显示感应区域
-        } else {
-            1.0f
-        }
+        1.0f // В редакторе джойстик всегда виден с нормальным размером
     } else {
         if (data.triggerMode == com.movtery.layer_controller.data.JoystickTriggerMode.FREE) {
             if (data.isInteracting) 1.0f else 0.0f // 游戏内按下显示1.0，松开渐隐为0.0
@@ -255,20 +251,20 @@ internal fun JoystickWidgetRenderer(
                     val joystickRenderSize = if (isFreeMode) {
                         val jSize = data.widgetSize
                         val widthPx = when (jSize.type) {
-                            ButtonSize.Type.Dp -> density.run { jSize.widthDp.toDp().toPx() }
+                            ButtonSize.Type.Dp -> jSize.widthDp * density.density
                             ButtonSize.Type.Percentage -> {
                                 val ref = if (jSize.widthReference == ButtonSize.Reference.ScreenWidth) screenSize.width else screenSize.height
                                 ref * (jSize.widthPercentage / 10000f)
                             }
-                            else -> density.run { jSize.widthDp.toDp().toPx() }
+                            else -> jSize.widthDp * density.density
                         }
                         val heightPx = when (jSize.type) {
-                            ButtonSize.Type.Dp -> density.run { jSize.heightDp.toDp().toPx() }
+                            ButtonSize.Type.Dp -> jSize.heightDp * density.density
                             ButtonSize.Type.Percentage -> {
                                 val ref = if (jSize.heightReference == ButtonSize.Reference.ScreenWidth) screenSize.width else screenSize.height
                                 ref * (jSize.heightPercentage / 10000f)
                             }
-                            else -> density.run { jSize.heightDp.toDp().toPx() }
+                            else -> jSize.heightDp * density.density
                         }
                         Size(widthPx, heightPx)
                     } else {
@@ -293,8 +289,10 @@ internal fun JoystickWidgetRenderer(
                         defaultCenter
                     }
 
-                    translate(left = bgCenter.x - defaultCenter.x, top = bgCenter.y - defaultCenter.y) {
-                        // 背景层
+                    val bgTopLeft = bgCenter - Offset(joystickRenderSize.width / 2f, joystickRenderSize.height / 2f)
+
+                    // 背景层
+                    translate(left = bgTopLeft.x, top = bgTopLeft.y) {
                         drawBackgroundLayer(
                             layoutDirection = layoutDirection,
                             size = joystickRenderSize,
@@ -303,33 +301,30 @@ internal fun JoystickWidgetRenderer(
                             borderColor = effectiveBorderColor,
                             borderWidthPx = (minSide * borderWidthRatio).coerceAtLeast(0f)
                         )
+                    }
 
-                        // 摇杆头
-                        val knobSize = minSide * joystickSizeRatio
-                        val knobCenter = Offset(
-                            defaultCenter.x + data.knobOffset.x,
-                            defaultCenter.y + data.knobOffset.y
-                        )
-                        drawJoystick(
-                            layoutDirection = layoutDirection,
-                            color = when {
-                                data.isLocked -> effectiveJoystickLockedColor
-                                data.canLockState -> effectiveJoystickCanLockColor
-                                else -> effectiveJoystickColor
-                            },
-                            center = knobCenter,
-                            size = knobSize,
-                            shape = joystickShape
-                        )
+                    // 摇杆头
+                    val knobSize = minSide * joystickSizeRatio
+                    val knobCenter = bgCenter + data.knobOffset
+                    drawJoystick(
+                        layoutDirection = layoutDirection,
+                        color = when {
+                            data.isLocked -> effectiveJoystickLockedColor
+                            data.canLockState -> effectiveJoystickCanLockColor
+                            else -> effectiveJoystickColor
+                        },
+                        center = knobCenter,
+                        size = knobSize,
+                        shape = joystickShape
+                    )
 
-                        // 绘制锁定标记
-                        if (data.isLocked) {
-                            drawCircle(
-                                color = effectiveLockMarkColor,
-                                center = Offset(defaultCenter.x, 0f),
-                                radius = 4f
-                            )
-                        }
+                    // 绘制锁定标记
+                    if (data.isLocked) {
+                        drawCircle(
+                            color = effectiveLockMarkColor,
+                            center = Offset(bgCenter.x, bgCenter.y - minSide / 2f),
+                            radius = 4f
+                        )
                     }
                 }
             }

@@ -136,38 +136,28 @@ class ObservableJoystickData(data: JoystickData) : ObservableWidget() {
         get() = InteractionBehavior.Press
 
     override val internalRenderPosition: ButtonPosition
-        get() = if (triggerMode == JoystickTriggerMode.FREE) freeAreaPosition else position
+        get() = position
 
     override fun putRenderPosition(position: ButtonPosition) {
-        if (triggerMode == JoystickTriggerMode.FREE) {
-            freeAreaPosition = position
-        } else {
-            this.position = position
-        }
+        this.position = position
     }
 
     override val styleId: String?
         get() = joystickStyleId
 
     override val widgetSize: ButtonSize
-        get() = if (triggerMode == JoystickTriggerMode.FREE) freeAreaSize else ButtonSize(
-            type = sizeType,
-            widthDp = sizeDp,
-            heightDp = sizeDp,
-            widthPercentage = sizePercentage,
-            heightPercentage = sizePercentage,
-            widthReference = ButtonSize.Reference.ScreenHeight,
-            heightReference = ButtonSize.Reference.ScreenHeight
-        )
+        get() = JoystickData(
+            uuid = uuid,
+            position = position,
+            sizeType = sizeType,
+            sizeDp = sizeDp,
+            sizePercentage = sizePercentage
+        ).toButtonSize()
 
     override fun putWidgetSize(size: ButtonSize) {
-        if (triggerMode == JoystickTriggerMode.FREE) {
-            freeAreaSize = size
-        } else {
-            sizeType = size.type
-            sizeDp = size.widthDp
-            sizePercentage = size.widthPercentage
-        }
+        sizeType = size.type
+        sizeDp = size.widthDp
+        sizePercentage = size.widthPercentage
     }
 
     override fun onCompositionStart(eventHandler: EventHandler?) {}
