@@ -484,64 +484,6 @@ fun ControlEditorLayer(
                 }
             }
 
-            // 当选中的是自由模式摇杆时，为感应区域提供交互式拖动和调整大小手柄
-            (selectedWidget as? ObservableJoystickData)?.takeIf { it.triggerMode == com.movtery.layer_controller.data.JoystickTriggerMode.FREE }?.let { joystick ->
-                val areaPos = joystick.freeAreaPosition
-                val areaSize = joystick.freeAreaSize
-                val areaWidthPx = when (areaSize.type) {
-                    ButtonSize.Type.Dp -> with(density) { areaSize.widthDp.dp.toPx() }
-                    ButtonSize.Type.Percentage -> {
-                        val ref = if (areaSize.widthReference == ButtonSize.Reference.ScreenWidth) screenSize.width else screenSize.height
-                        ref * (areaSize.widthPercentage / 10000f)
-                    }
-                    else -> with(density) { areaSize.widthDp.dp.toPx() }
-                }
-                val areaHeightPx = when (areaSize.type) {
-                    ButtonSize.Type.Dp -> with(density) { areaSize.heightDp.dp.toPx() }
-                    ButtonSize.Type.Percentage -> {
-                        val ref = if (areaSize.heightReference == ButtonSize.Reference.ScreenWidth) screenSize.width else screenSize.height
-                        ref * (areaSize.heightPercentage / 10000f)
-                    }
-                    else -> with(density) { areaSize.heightDp.dp.toPx() }
-                }
-
-                val freeAreaRenderSize = IntSize(areaWidthPx.toInt(), areaHeightPx.toInt())
-                var areaTL by remember(areaPos, freeAreaRenderSize, screenSize) {
-                    mutableStateOf(getWidgetPosition(areaPos, freeAreaRenderSize, screenSize))
-                }
-                var areaBR by remember(areaTL, freeAreaRenderSize) {
-                    mutableStateOf(Offset(areaTL.x + freeAreaRenderSize.width, areaTL.y + freeAreaRenderSize.height))
-                }
-
-                // 约束计算：感应区域不能脱离摇杆（感应区域必须包含摇杆本身）
-                val joystickSize = joystick.internalRenderSize
-                val joystickTL = getWidgetPosition(joystick, joystickSize, screenSize)
-                val joystickBR = Offset(joystickTL.x + joystickSize.width, joystickTL.y + joystickSize.height)
-
-                val updateAreaSizeAndPos = { newTopLeft: Offset, newSize: IntSize ->
-                    val newPosPercentage = newTopLeft.toPercentagePosition(newSize, screenSize)
-                    joystick.freeAreaPosition = newPosPercentage
-
-                    val oldAreaSize = joystick.freeAreaSize
-                    val newAreaSize = when (oldAreaSize.type) {
-                        ButtonSize.Type.Dp -> {
-                            oldAreaSize.copy(
-                                widthDp = with(density) { newSize.width.toDp().value },
-                                heightDp = with(density) { newSize.height.toDp().value }
-                            )
-                        }
-                        ButtonSize.Type.Percentage -> {
-                            val widthRef = if (oldAreaSize.widthReference == ButtonSize.Reference.ScreenWidth) screenSize.width else screenSize.height
-                            val heightRef = if (oldAreaSize.heightReference == ButtonSize.Reference.ScreenWidth) screenSize.width else screenSize.height
-                            oldAreaSize.copy(
-                                widthPercentage = (newSize.width.toFloat() / widthRef * MAX_SIZE_PERCENTAGE).roundToInt().coerceIn(MIN_SIZE_PERCENTAGE, MAX_SIZE_PERCENTAGE),
-                                heightPercentage = (newSize.height.toFloat() / heightRef * MAX_SIZE_PERCENTAGE).roundToInt().coerceIn(MIN_SIZE_PERCENTAGE, MAX_SIZE_PERCENTAGE)
-                            )
-                        }
-                        else -> oldAreaSize
-                    }
-                    joystick.freeAreaSize = newAreaSize
-                }
 
             // 当选中的是自由模式摇杆时，为感应区域提供交互式缩放手柄和移动手柄
             (selectedWidget as? ObservableJoystickData)?.takeIf { it.triggerMode == com.movtery.layer_controller.data.JoystickTriggerMode.FREE }?.let { joystick ->
