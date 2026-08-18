@@ -40,7 +40,9 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.window.Dialog
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.widthIn
+import androidx.compose.ui.window.DialogProperties
 import com.movtery.zalithlauncher.R
 import com.movtery.zalithlauncher.ui.theme.cardColor
 import com.movtery.zalithlauncher.ui.theme.onCardColor
@@ -100,15 +102,15 @@ fun MobileGluesSettingsDialog(onDismissRequest: () -> Unit) {
         }.getOrNull() ?: "v2.0.0"
     }
 
-    Dialog(
+    androidx.compose.ui.window.Dialog(
         onDismissRequest = onDismissRequest,
-        properties = androidx.compose.ui.window.DialogProperties(usePlatformDefaultWidth = false)
+        properties = DialogProperties(usePlatformDefaultWidth = false)
     ) {
         Surface(
             modifier = Modifier
                 .fillMaxWidth(0.92f)
-                .androidx.compose.foundation.layout.widthIn(max = 680.dp)
-                .androidx.compose.foundation.layout.heightIn(max = 760.dp)
+                .widthIn(max = 680.dp)
+                .heightIn(max = 760.dp)
                 .padding(vertical = 16.dp),
             shape = MaterialTheme.shapes.extraLarge,
             color = cardColor(false),
