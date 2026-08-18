@@ -662,6 +662,7 @@ private fun ControlWidgetRenderer(
     onLineCancel: (ObservableWidget) -> Unit
 ) {
     val allWidgetsMap = remember { mutableStateMapOf<ObservableControlLayer, List<ObservableWidget>>() }
+    val density = LocalDensity.current
     val snapInAllLayers1 by rememberUpdatedState(snapInAllLayers)
 
     @Composable
