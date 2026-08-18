@@ -247,7 +247,7 @@ fun ControlEditorLayer(
                     val areaOffset = getWidgetPosition(areaPos, freeAreaRenderSize, screenSize)
 
                     drawRect(
-                        color = primaryColor.copy(alpha = 0.6f),
+                        color = primaryColor.copy(alpha = 0.8f),
                         topLeft = areaOffset,
                         size = Size(areaWidthPx, areaHeightPx),
                         style = Stroke(
@@ -256,7 +256,7 @@ fun ControlEditorLayer(
                         )
                     )
                     drawRect(
-                        color = primaryColor.copy(alpha = 0.08f),
+                        color = primaryColor.copy(alpha = 0.30f),
                         topLeft = areaOffset,
                         size = Size(areaWidthPx, areaHeightPx)
                     )

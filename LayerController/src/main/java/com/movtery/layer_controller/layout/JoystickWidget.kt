@@ -180,10 +180,18 @@ internal fun JoystickWidgetRenderer(
         label = "JoystickBaseOffset"
     )
 
-    val targetAlphaFactor = if (data.triggerMode == com.movtery.layer_controller.data.JoystickTriggerMode.FREE && !data.isInteracting) {
-        maxOf(0.10f, data.freeRestingAlpha)
+    val targetAlphaFactor = if (isEditMode) {
+        if (data.triggerMode == com.movtery.layer_controller.data.JoystickTriggerMode.FREE) {
+            maxOf(0.10f, data.freeRestingAlpha)
+        } else {
+            1.0f
+        }
     } else {
-        1.0f
+        if (data.triggerMode == com.movtery.layer_controller.data.JoystickTriggerMode.FREE && !data.isInteracting) {
+            data.freeRestingAlpha
+        } else {
+            1.0f
+        }
     }
     val animatedAlphaFactor by androidx.compose.animation.core.animateFloatAsState(
         targetValue = targetAlphaFactor,
