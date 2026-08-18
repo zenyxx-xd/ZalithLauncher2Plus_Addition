@@ -121,7 +121,7 @@ data class JoystickData(
         heightDp = 300f,
         widthPercentage = 4000,
         heightPercentage = 4000,
-        widthReference = ButtonSize.Reference.ScreenHeight,
+        widthReference = ButtonSize.Reference.ScreenWidth,
         heightReference = ButtonSize.Reference.ScreenHeight
     ),
     @SerialName("freeRestingAlpha")

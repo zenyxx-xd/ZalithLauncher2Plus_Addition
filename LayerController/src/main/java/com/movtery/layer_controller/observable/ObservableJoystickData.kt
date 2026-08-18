@@ -408,8 +408,23 @@ class ObservableJoystickData(data: JoystickData) : ObservableWidget() {
                                         screenSize
                                     )
                                     val globalTouchPos = joystickOffset + localPos
-                                    val freeAreaRenderSize = freeAreaWidget.internalRenderSize.takeIf { it != IntSize.Zero }
-                                        ?: screenSize
+                                    val areaWidthPx = when (freeAreaSize.type) {
+                                        ButtonSize.Type.Dp -> density.run { freeAreaSize.widthDp.toDp().toPx() }
+                                        ButtonSize.Type.Percentage -> {
+                                            val ref = if (freeAreaSize.widthReference == ButtonSize.Reference.ScreenWidth) screenSize.width else screenSize.height
+                                            ref * (freeAreaSize.widthPercentage / 10000f)
+                                        }
+                                        else -> density.run { freeAreaSize.widthDp.toDp().toPx() }
+                                    }
+                                    val areaHeightPx = when (freeAreaSize.type) {
+                                        ButtonSize.Type.Dp -> density.run { freeAreaSize.heightDp.toDp().toPx() }
+                                        ButtonSize.Type.Percentage -> {
+                                            val ref = if (freeAreaSize.heightReference == ButtonSize.Reference.ScreenWidth) screenSize.width else screenSize.height
+                                            ref * (freeAreaSize.heightPercentage / 10000f)
+                                        }
+                                        else -> density.run { freeAreaSize.heightDp.toDp().toPx() }
+                                    }
+                                    val freeAreaRenderSize = IntSize(areaWidthPx.toInt(), areaHeightPx.toInt())
                                     val freeAreaOffset = com.movtery.layer_controller.utils.getWidgetPosition(
                                         freeAreaPosition,
                                         freeAreaRenderSize,
