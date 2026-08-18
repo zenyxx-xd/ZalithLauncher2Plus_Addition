@@ -514,6 +514,37 @@ fun ControlEditorLayer(
 
 
 
+                // 自由区域拖动层（在选中的自由区域范围内任意触摸拖动，均可直接移动区域）
+                Box(
+                    modifier = Modifier
+                        .offset { IntOffset(touchOffset.x.roundToInt(), touchOffset.y.roundToInt()) }
+                        .size(
+                            with(density) { freeAreaRenderSize.width.toDp() },
+                            with(density) { freeAreaRenderSize.height.toDp() }
+                        )
+                        .pointerInput(joystick, screenSize, freeAreaRenderSize) {
+                            detectDragGestures(
+                                onDrag = { change, dragAmount ->
+                                    change.consume()
+                                    val cur = getWidgetPosition(joystick.freeAreaPosition, freeAreaRenderSize, screenSize)
+                                    var newX = cur.x + dragAmount.x
+                                    var newY = cur.y + dragAmount.y
+
+                                    val minAreaX = maxOf(0f, joystickBR.x - freeAreaRenderSize.width)
+                                    val maxAreaX = minOf(screenSize.width.toFloat() - freeAreaRenderSize.width, joystickTL.x)
+                                    val minAreaY = maxOf(0f, joystickBR.y - freeAreaRenderSize.height)
+                                    val maxAreaY = minOf(screenSize.height.toFloat() - freeAreaRenderSize.height, joystickTL.y)
+
+                                    newX = newX.coerceIn(minAreaX, maxAreaX)
+                                    newY = newY.coerceIn(minAreaY, maxAreaY)
+
+                                    val finalPos = Offset(newX, newY).toPercentagePosition(freeAreaRenderSize, screenSize)
+                                    joystick.freeAreaPosition = finalPos
+                                }
+                            )
+                        }
+                )
+
                 // 左上角缩放手柄
                 Box(
                     modifier = Modifier
@@ -714,74 +745,6 @@ private fun ControlWidgetRenderer(
 
                 normalButtons.forEach { data ->
                     RenderWidget(data, layer, data.isPressed)
-                }
-
-                // 先渲染所有自由模式摇杆的感应区域交互框（位于下层，触摸即可选中或拖拽区域，摇杆在其上层）
-                joystickButtons.filter { it.triggerMode == com.movtery.layer_controller.data.JoystickTriggerMode.FREE }.forEach { joystick ->
-                    val areaPos = joystick.freeAreaPosition
-                    val areaSize = joystick.freeAreaSize
-                    val areaWidthPx = when (areaSize.type) {
-                        ButtonSize.Type.Dp -> with(density) { areaSize.widthDp.dp.toPx() }
-                        ButtonSize.Type.Percentage -> {
-                            val ref = if (areaSize.widthReference == ButtonSize.Reference.ScreenWidth) screenSize.width else screenSize.height
-                            ref * (areaSize.widthPercentage / 10000f)
-                        }
-                        else -> with(density) { areaSize.widthDp.dp.toPx() }
-                    }
-                    val areaHeightPx = when (areaSize.type) {
-                        ButtonSize.Type.Dp -> with(density) { areaSize.heightDp.dp.toPx() }
-                        ButtonSize.Type.Percentage -> {
-                            val ref = if (areaSize.heightReference == ButtonSize.Reference.ScreenWidth) screenSize.width else screenSize.height
-                            ref * (areaSize.heightPercentage / 10000f)
-                        }
-                        else -> with(density) { areaSize.heightDp.dp.toPx() }
-                    }
-                    val freeAreaRenderSize = IntSize(areaWidthPx.toInt(), areaHeightPx.toInt())
-                    val areaOffset = getWidgetPosition(areaPos, freeAreaRenderSize, screenSize)
-
-                    Box(
-                        modifier = Modifier
-                            .offset { IntOffset(areaOffset.x.roundToInt(), areaOffset.y.roundToInt()) }
-                            .size(
-                                with(density) { freeAreaRenderSize.width.toDp() },
-                                with(density) { freeAreaRenderSize.height.toDp() }
-                            )
-                            .pointerInput(joystick, screenSize, freeAreaRenderSize) {
-                                detectTapGestures(
-                                    onTap = {
-                                        onButtonTap(joystick, layer)
-                                    }
-                                )
-                            }
-                            .pointerInput(joystick, screenSize, freeAreaRenderSize) {
-                                detectDragGestures(
-                                    onDragStart = {
-                                        onButtonTap(joystick, layer)
-                                    },
-                                    onDrag = { change, dragAmount ->
-                                        change.consume()
-                                        val cur = getWidgetPosition(joystick.freeAreaPosition, freeAreaRenderSize, screenSize)
-                                        val joystickSize = joystick.internalRenderSize
-                                        val joystickTL = getWidgetPosition(joystick, joystickSize, screenSize)
-                                        val joystickBR = Offset(joystickTL.x + joystickSize.width, joystickTL.y + joystickSize.height)
-
-                                        var newX = cur.x + dragAmount.x
-                                        var newY = cur.y + dragAmount.y
-
-                                        val minAreaX = maxOf(0f, joystickBR.x - freeAreaRenderSize.width)
-                                        val maxAreaX = minOf(screenSize.width.toFloat() - freeAreaRenderSize.width, joystickTL.x)
-                                        val minAreaY = maxOf(0f, joystickBR.y - freeAreaRenderSize.height)
-                                        val maxAreaY = minOf(screenSize.height.toFloat() - freeAreaRenderSize.height, joystickTL.y)
-
-                                        newX = newX.coerceIn(minAreaX, maxAreaX)
-                                        newY = newY.coerceIn(minAreaY, maxAreaY)
-
-                                        val finalPos = Offset(newX, newY).toPercentagePosition(freeAreaRenderSize, screenSize)
-                                        joystick.freeAreaPosition = finalPos
-                                    }
-                                )
-                            }
-                    )
                 }
 
                 joystickButtons.forEach { data ->
