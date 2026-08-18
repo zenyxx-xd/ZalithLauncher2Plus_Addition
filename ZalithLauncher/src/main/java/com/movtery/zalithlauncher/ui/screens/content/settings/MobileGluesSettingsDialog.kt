@@ -55,16 +55,6 @@ fun MobileGluesSettingsDialog(onDismissRequest: () -> Unit) {
         MobileGluesConfig.load() ?: MobileGluesConfig()
     }
 
-    val knownKeys = remember {
-        setOf(
-            "enableANGLE", "enableNoError", "enableExtTimerQuery",
-            "enableExtComputeShader", "enableExtDirectStateAccess",
-            "maxGlslCacheSize", "multidrawMode", "angleDepthClearFixMode",
-            "maxGlslCacheSize", "angleDepthClearFixMode",
-            "customGLVersion", "fsr1"
-        )
-    }
-
     var enableANGLE by remember { mutableIntStateOf(config.get("enableANGLE", 1)) }
     var enableNoError by remember { mutableIntStateOf(config.get("enableNoError", 0)) }
     var enableExtTimerQuery by remember { mutableStateOf(config.get("enableExtTimerQuery", 0) == 1) }
@@ -110,160 +100,177 @@ fun MobileGluesSettingsDialog(onDismissRequest: () -> Unit) {
         }.getOrNull() ?: "v2.0.0"
     }
 
-    Dialog(onDismissRequest = onDismissRequest) {
+    Dialog(
+        onDismissRequest = onDismissRequest,
+        properties = androidx.compose.ui.window.DialogProperties(usePlatformDefaultWidth = false)
+    ) {
         Surface(
             modifier = Modifier
-                .padding(16.dp)
-                .fillMaxWidth(),
+                .fillMaxWidth(0.92f)
+                .androidx.compose.foundation.layout.widthIn(max = 680.dp)
+                .androidx.compose.foundation.layout.heightIn(max = 760.dp)
+                .padding(vertical = 16.dp),
             shape = MaterialTheme.shapes.extraLarge,
             color = cardColor(false),
             contentColor = onCardColor(),
-            shadowElevation = 6.dp
+            shadowElevation = 8.dp
         ) {
             Column(
-                modifier = Modifier.padding(20.dp)
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(24.dp)
             ) {
+                // Header
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text(
-                        text = stringResource(R.string.mobileglues_settings_title),
-                        style = MaterialTheme.typography.titleLarge
-                    )
-                    Text(
-                        text = mgVersion,
-                        style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.primary
-                    )
-                }
+                    Column {
+                        Text(
+                            text = stringResource(R.string.mobileglues_settings_title),
+                            style = MaterialTheme.typography.headlineSmall
+                        )
+                        Text(
+                            text = "MobileGlues Engine $mgVersion",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                    }
 
-                Spacer(modifier = Modifier.height(12.dp))
-
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    Button(
-                        modifier = Modifier.weight(1f),
-                        onClick = {
-                            config.set("enableANGLE", enableANGLE)
-                            config.set("enableNoError", enableNoError)
-                            config.set("enableExtTimerQuery", if (enableExtTimerQuery) 1 else 0)
-                            config.set("enableExtComputeShader", if (enableExtComputeShader) 1 else 0)
-                            config.set("enableExtDirectStateAccess", if (enableExtDirectStateAccess) 1 else 0)
-                            config.set("maxGlslCacheSize", maxGlslCacheSize.toIntOrNull() ?: 32)
-                            config.set("angleDepthClearFixMode", angleDepthClearFixMode)
-                            config.set("customGLVersion", customGLVersion)
-                            config.set("fsr1", if (fsr1) 1 else 0)
-                            unknownValues.forEach { (k, v) -> config.set(k, v) }
-                            config.save()
-                            Toast.makeText(context, context.getString(R.string.mobileglues_saved_toast), Toast.LENGTH_SHORT).show()
-                            onDismissRequest()
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        OutlinedButton(
+                            onClick = { showResetConfirm = true },
+                            shape = MaterialTheme.shapes.medium
+                        ) {
+                            Text(stringResource(R.string.generic_reset))
                         }
-                    ) {
-                        Text(stringResource(R.string.generic_save))
-                    }
-
-                    OutlinedButton(
-                        modifier = Modifier.weight(1f),
-                        onClick = { showResetConfirm = true }
-                    ) {
-                        Text(stringResource(R.string.generic_reset))
+                        Button(
+                            onClick = {
+                                config.set("enableANGLE", enableANGLE)
+                                config.set("enableNoError", enableNoError)
+                                config.set("enableExtTimerQuery", if (enableExtTimerQuery) 1 else 0)
+                                config.set("enableExtComputeShader", if (enableExtComputeShader) 1 else 0)
+                                config.set("enableExtDirectStateAccess", if (enableExtDirectStateAccess) 1 else 0)
+                                config.set("maxGlslCacheSize", maxGlslCacheSize.toIntOrNull() ?: 32)
+                                config.set("angleDepthClearFixMode", angleDepthClearFixMode)
+                                config.set("customGLVersion", customGLVersion)
+                                config.set("fsr1", if (fsr1) 1 else 0)
+                                unknownValues.forEach { (k, v) -> config.set(k, v) }
+                                config.save()
+                                Toast.makeText(context, context.getString(R.string.mobileglues_saved_toast), Toast.LENGTH_SHORT).show()
+                                onDismissRequest()
+                            },
+                            shape = MaterialTheme.shapes.medium
+                        ) {
+                            Text(stringResource(R.string.generic_save))
+                        }
                     }
                 }
 
+                Spacer(modifier = Modifier.height(16.dp))
+
+                // Scrollable Content
                 Column(
                     modifier = Modifier
-                        .verticalScroll(rememberScrollState())
-                        .padding(top = 16.dp),
+                        .fillMaxWidth()
+                        .weight(1f)
+                        .verticalScroll(rememberScrollState()),
                     verticalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
-                    HorizontalDivider()
+                    // Group 1: Rendering
+                    SettingsGroupCard(title = stringResource(R.string.mobileglues_section_rendering)) {
+                        ANGLEPicker(
+                            value = enableANGLE,
+                            onValueChange = { enableANGLE = it }
+                        )
 
-                    SectionHeader(stringResource(R.string.mobileglues_section_rendering))
+                        Spacer(modifier = Modifier.height(12.dp))
 
-                    ANGLEPicker(
-                        value = enableANGLE,
-                        onValueChange = { enableANGLE = it }
-                    )
+                        AngleClearPicker(
+                            value = angleDepthClearFixMode,
+                            onValueChange = { angleDepthClearFixMode = it }
+                        )
 
-                    AngleClearPicker(
-                        value = angleDepthClearFixMode,
-                        onValueChange = { angleDepthClearFixMode = it }
-                    )
+                        Spacer(modifier = Modifier.height(12.dp))
 
-                    GLVersionDropdown(
-                        value = customGLVersion,
-                        options = glVersions,
-                        onValueChange = { customGLVersion = it }
-                    )
+                        GLVersionDropdown(
+                            value = customGLVersion,
+                            options = glVersions,
+                            onValueChange = { customGLVersion = it }
+                        )
 
-                    SettingsSwitchRow(
-                        title = stringResource(R.string.mobileglues_fsr1),
-                        summary = stringResource(R.string.mobileglues_fsr1_summary),
-                        checked = fsr1,
-                        onCheckedChange = { fsr1 = it }
-                    )
+                        Spacer(modifier = Modifier.height(12.dp))
 
-                    HorizontalDivider()
+                        SettingsSwitchRow(
+                            title = stringResource(R.string.mobileglues_fsr1),
+                            summary = stringResource(R.string.mobileglues_fsr1_summary),
+                            checked = fsr1,
+                            onCheckedChange = { fsr1 = it }
+                        )
+                    }
 
-                    SectionHeader(stringResource(R.string.mobileglues_section_advanced))
+                    // Group 2: Advanced & Errors
+                    SettingsGroupCard(title = stringResource(R.string.mobileglues_section_advanced)) {
+                        NoErrorPicker(
+                            value = enableNoError,
+                            onValueChange = { enableNoError = it }
+                        )
+                    }
 
-                    NoErrorPicker(
-                        value = enableNoError,
-                        onValueChange = { enableNoError = it }
-                    )
+                    // Group 3: Extensions
+                    SettingsGroupCard(title = stringResource(R.string.mobileglues_section_extensions)) {
+                        SettingsSwitchRow(
+                            title = stringResource(R.string.mobileglues_compute_shader),
+                            summary = stringResource(R.string.mobileglues_compute_shader_summary),
+                            checked = enableExtComputeShader,
+                            onCheckedChange = { enableExtComputeShader = it }
+                        )
 
-                    HorizontalDivider()
+                        HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp), color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
 
-                    SectionHeader(stringResource(R.string.mobileglues_section_extensions))
+                        SettingsSwitchRow(
+                            title = stringResource(R.string.mobileglues_timer_query),
+                            summary = stringResource(R.string.mobileglues_timer_query_summary),
+                            checked = enableExtTimerQuery,
+                            onCheckedChange = { enableExtTimerQuery = it }
+                        )
 
-                    SettingsSwitchRow(
-                        title = stringResource(R.string.mobileglues_compute_shader),
-                        summary = stringResource(R.string.mobileglues_compute_shader_summary),
-                        checked = enableExtComputeShader,
-                        onCheckedChange = { enableExtComputeShader = it }
-                    )
+                        HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp), color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
 
-                    SettingsSwitchRow(
-                        title = stringResource(R.string.mobileglues_timer_query),
-                        summary = stringResource(R.string.mobileglues_timer_query_summary),
-                        checked = enableExtTimerQuery,
-                        onCheckedChange = { enableExtTimerQuery = it }
-                    )
+                        SettingsSwitchRow(
+                            title = stringResource(R.string.mobileglues_direct_state_access),
+                            summary = stringResource(R.string.mobileglues_direct_state_access_summary),
+                            checked = enableExtDirectStateAccess,
+                            onCheckedChange = { enableExtDirectStateAccess = it }
+                        )
+                    }
 
-                    SettingsSwitchRow(
-                        title = stringResource(R.string.mobileglues_direct_state_access),
-                        summary = stringResource(R.string.mobileglues_direct_state_access_summary),
-                        checked = enableExtDirectStateAccess,
-                        onCheckedChange = { enableExtDirectStateAccess = it }
-                    )
+                    // Group 4: Shader Cache
+                    SettingsGroupCard(title = stringResource(R.string.mobileglues_section_cache)) {
+                        OutlinedTextField(
+                            modifier = Modifier.fillMaxWidth(),
+                            value = maxGlslCacheSize,
+                            onValueChange = { maxGlslCacheSize = it },
+                            label = { Text(stringResource(R.string.mobileglues_cache_size_label)) },
+                            supportingText = { Text(stringResource(R.string.mobileglues_cache_size_supporting)) },
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                            singleLine = true,
+                            shape = MaterialTheme.shapes.medium
+                        )
+                    }
 
-                    HorizontalDivider()
-                    SectionHeader(stringResource(R.string.mobileglues_section_cache))
-
-                    OutlinedTextField(
-                        modifier = Modifier.fillMaxWidth(),
-                        value = maxGlslCacheSize,
-                        onValueChange = { maxGlslCacheSize = it },
-                        label = { Text(stringResource(R.string.mobileglues_cache_size_label)) },
-                        supportingText = { Text(stringResource(R.string.mobileglues_cache_size_supporting)) },
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                        singleLine = true
-                    )
-
+                    // Group 5: Other
                     if (unknownKeys.isNotEmpty()) {
-                        HorizontalDivider()
-                        SectionHeader(stringResource(R.string.mobileglues_section_other))
-
-                        unknownKeys.forEach { key ->
-                            UnknownSettingRow(
-                                key = key,
-                                value = unknownValues[key] ?: 0,
-                                onValueChange = { unknownValues = unknownValues + (key to it) }
-                            )
+                        SettingsGroupCard(title = stringResource(R.string.mobileglues_section_other)) {
+                            unknownKeys.forEach { key ->
+                                UnknownSettingRow(
+                                    key = key,
+                                    value = unknownValues[key] ?: 0,
+                                    onValueChange = { unknownValues = unknownValues + (key to it) }
+                                )
+                                Spacer(modifier = Modifier.height(8.dp))
+                            }
                         }
                     }
                 }
@@ -303,12 +310,30 @@ fun MobileGluesSettingsDialog(onDismissRequest: () -> Unit) {
 }
 
 @Composable
-private fun SectionHeader(title: String) {
-    Text(
-        text = title,
-        style = MaterialTheme.typography.labelLarge,
-        color = MaterialTheme.colorScheme.primary
-    )
+private fun SettingsGroupCard(
+    title: String,
+    content: @Composable androidx.compose.foundation.layout.ColumnScope.() -> Unit
+) {
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = MaterialTheme.shapes.large,
+        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f),
+        border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f))
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp)
+        ) {
+            Text(
+                text = title,
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.padding(bottom = 12.dp)
+            )
+            content()
+        }
+    }
 }
 
 @Composable
@@ -322,12 +347,12 @@ private fun SettingsSwitchRow(
         modifier = Modifier.fillMaxWidth(),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Column(modifier = Modifier.weight(1f)) {
-            Text(text = title, style = MaterialTheme.typography.bodyMedium)
+        Column(modifier = Modifier.weight(1f).padding(end = 16.dp)) {
+            Text(text = title, style = MaterialTheme.typography.bodyLarge)
             Text(
                 text = summary,
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.outline
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
         Switch(checked = checked, onCheckedChange = onCheckedChange)
@@ -346,7 +371,8 @@ private fun UnknownSettingRow(key: String, value: Int, onValueChange: (Int) -> U
         },
         label = { Text(key) },
         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-        singleLine = true
+        singleLine = true,
+        shape = MaterialTheme.shapes.medium
     )
 }
 
@@ -409,7 +435,11 @@ private fun GLVersionDropdown(
     var expanded by remember { mutableStateOf(false) }
     val selectedLabel = options.find { it.first == value }?.second ?: stringResource(R.string.mobileglues_gl_disabled)
 
-    Text(stringResource(R.string.mobileglues_custom_gl_version), style = MaterialTheme.typography.bodyMedium)
+    Text(
+        stringResource(R.string.mobileglues_custom_gl_version),
+        style = MaterialTheme.typography.bodyMedium,
+        color = MaterialTheme.colorScheme.onSurface
+    )
     Spacer(modifier = Modifier.height(4.dp))
 
     ExposedDropdownMenuBox(
@@ -424,7 +454,8 @@ private fun GLVersionDropdown(
             onValueChange = {},
             readOnly = true,
             trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
-            singleLine = true
+            singleLine = true,
+            shape = MaterialTheme.shapes.medium
         )
         ExposedDropdownMenu(
             expanded = expanded,
@@ -454,7 +485,11 @@ private fun DropdownSettingRow(
     var expanded by remember { mutableStateOf(false) }
     val selectedLabel = options.find { it.second == selectedValue }?.first ?: options.first().first
 
-    Text(label, style = MaterialTheme.typography.bodyMedium)
+    Text(
+        label,
+        style = MaterialTheme.typography.bodyMedium,
+        color = MaterialTheme.colorScheme.onSurface
+    )
     Spacer(modifier = Modifier.height(4.dp))
 
     ExposedDropdownMenuBox(
@@ -469,7 +504,8 @@ private fun DropdownSettingRow(
             onValueChange = {},
             readOnly = true,
             trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
-            singleLine = true
+            singleLine = true,
+            shape = MaterialTheme.shapes.medium
         )
         ExposedDropdownMenu(
             expanded = expanded,
