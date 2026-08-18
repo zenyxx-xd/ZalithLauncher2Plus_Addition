@@ -2,6 +2,11 @@ import com.android.build.api.variant.FilterConfiguration.FilterType.ABI
 import com.android.build.api.variant.impl.VariantOutputImpl
 import com.android.build.gradle.tasks.MergeSourceSetFolders
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
+import java.net.URI
+import java.net.URL
+import java.net.HttpURLConnection
+import java.util.zip.ZipInputStream
+import java.util.zip.ZipEntry
 
 plugins {
     alias(libs.plugins.android.application)
@@ -183,8 +188,8 @@ val downloadMobileGlues by tasks.registering {
 
         var latestTag = "unknown"
         try {
-            val apiUrl = java.net.URI("https://api.github.com/repos/MobileGL-Dev/MobileGlues-release/releases/latest").toURL()
-            val conn = apiUrl.openConnection() as java.net.HttpURLConnection
+            val apiUrl = URI("https://api.github.com/repos/MobileGL-Dev/MobileGlues-release/releases/latest").toURL()
+            val conn = apiUrl.openConnection() as HttpURLConnection
             conn.setRequestProperty("User-Agent", "ZalithLauncher-Build")
             val releaseJson = conn.inputStream.bufferedReader().use { it.readText() }
 
@@ -213,17 +218,18 @@ val downloadMobileGlues by tasks.registering {
             val needsDownload = abiMap.values.any { !it.exists() || it.length() == 0L }
             if (needsDownload && downloadUrl != null) {
                 logger.lifecycle("[MobileGlues] Downloading MobileGlues ($latestTag) from $downloadUrl...")
-                val apkStream = java.net.URI(downloadUrl).toURL().openStream()
-                val zipStream = java.util.zip.ZipInputStream(apkStream)
-                var entry = zipStream.nextEntry
+                val apkStream = URI(downloadUrl).toURL().openStream()
+                val zipStream = ZipInputStream(apkStream)
+                var entry: ZipEntry? = zipStream.nextEntry
                 while (entry != null) {
-                    val destFile = abiMap[entry.name]
+                    val entryName = entry.name
+                    val destFile = abiMap[entryName]
                     if (destFile != null) {
                         destFile.parentFile?.mkdirs()
                         destFile.outputStream().use { out ->
                             zipStream.copyTo(out)
                         }
-                        logger.lifecycle("[MobileGlues] Extracted ${entry.name} -> ${destFile.absolutePath} (${destFile.length()} bytes)")
+                        logger.lifecycle("[MobileGlues] Extracted $entryName -> ${destFile.absolutePath} (${destFile.length()} bytes)")
                     }
                     zipStream.closeEntry()
                     entry = zipStream.nextEntry
