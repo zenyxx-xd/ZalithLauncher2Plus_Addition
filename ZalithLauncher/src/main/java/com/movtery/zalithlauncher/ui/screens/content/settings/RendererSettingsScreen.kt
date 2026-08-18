@@ -194,7 +194,7 @@ fun RendererSettingsScreen(
                         getItemSummary = { renderer ->
                             Column {
                                 RendererSummaryLayout(renderer)
-                                if (renderer.getRendererId() == "mobileglues" || renderer.getRendererName().startsWith("MobileGlues")) {
+                                if (renderer == com.movtery.zalithlauncher.game.renderer.renderers.MobileGluesRenderer) {
                                     val hasConfig = remember { MobileGluesConfig.load() != null }
                                     if (hasConfig) {
                                         Text(
@@ -207,7 +207,7 @@ fun RendererSettingsScreen(
                             }
                         },
                         getItemTrailing = { renderer ->
-                            if (renderer.getRendererId() == "mobileglues" || renderer.getRendererName().startsWith("MobileGlues")) {
+                            if (renderer == com.movtery.zalithlauncher.game.renderer.renderers.MobileGluesRenderer) {
                                 IconButton(onClick = { showMobileGluesSettings = true }) {
                                     Icon(
                                         painter = painterResource(R.drawable.ic_settings_filled),
