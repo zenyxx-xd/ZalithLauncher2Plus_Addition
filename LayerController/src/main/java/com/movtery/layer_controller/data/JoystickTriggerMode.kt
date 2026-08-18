@@ -37,5 +37,11 @@ enum class JoystickTriggerMode {
      * 手指碰到摇杆的可触摸范围即可触发并使用
      */
     @SerialName("touch")
-    TOUCH
+    TOUCH,
+    /**
+     * 自由模式（动态跟随）
+     * 无触摸时摇杆半透明静止在中心，触摸活动范围时基座动态移动至手指位置
+     */
+    @SerialName("free")
+    FREE
 }

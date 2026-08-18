@@ -172,6 +172,25 @@ internal fun JoystickWidgetRenderer(
         }
     }
 
+    // 动画平滑过渡自由模式下的基座移动与透明度变化
+    val animDuration = data.freeAnimationDurationMs.coerceAtLeast(0)
+    val animatedBaseOffset by androidx.compose.animation.core.animateOffsetAsState(
+        targetValue = data.baseOffset,
+        animationSpec = androidx.compose.animation.core.tween(durationMillis = animDuration),
+        label = "JoystickBaseOffset"
+    )
+
+    val targetAlphaFactor = if (data.triggerMode == com.movtery.layer_controller.data.JoystickTriggerMode.FREE && !data.isInteracting) {
+        data.freeRestingAlpha
+    } else {
+        1.0f
+    }
+    val animatedAlphaFactor by androidx.compose.animation.core.animateFloatAsState(
+        targetValue = targetAlphaFactor,
+        animationSpec = androidx.compose.animation.core.tween(durationMillis = animDuration),
+        label = "JoystickFreeAlpha"
+    )
+
     if (visible) {
         Box(
             modifier = Modifier
@@ -223,43 +242,60 @@ internal fun JoystickWidgetRenderer(
             Canvas(modifier = Modifier.fillMaxSize()) {
                 if (initialized) {
                     val minSide = minOf(size.width, size.height)
-                    val bgCenter = Offset(size.width / 2f, size.height / 2f)
+                    val defaultCenter = Offset(size.width / 2f, size.height / 2f)
 
-                    // 背景层
-                    drawBackgroundLayer(
-                        layoutDirection = layoutDirection,
-                        size = Size(size.width, size.height),
-                        shape = backgroundShape,
-                        backgroundColor = currentBackgroundColor,
-                        borderColor = currentBorderColor,
-                        borderWidthPx = (minSide * borderWidthRatio).coerceAtLeast(0f)
-                    )
+                    val freeAlphaFactor = animatedAlphaFactor
 
-                    // 摇杆头
-                    val knobSize = minSide * joystickSizeRatio
-                    val knobCenter = Offset(
-                        bgCenter.x + data.knobOffset.x,
-                        bgCenter.y + data.knobOffset.y
-                    )
-                    drawJoystick(
-                        layoutDirection = layoutDirection,
-                        color = when {
-                            data.isLocked -> currentJoystickLockedColor
-                            data.canLockState -> currentJoystickCanLockColor
-                            else -> currentJoystickColor
-                        },
-                        center = knobCenter,
-                        size = knobSize,
-                        shape = joystickShape
-                    )
+                    val effectiveBgColor = currentBackgroundColor.copy(alpha = (currentBackgroundColor.alpha * freeAlphaFactor).coerceIn(0f, 1f))
+                    val effectiveBorderColor = currentBorderColor.copy(alpha = (currentBorderColor.alpha * freeAlphaFactor).coerceIn(0f, 1f))
+                    val effectiveJoystickColor = currentJoystickColor.copy(alpha = (currentJoystickColor.alpha * freeAlphaFactor).coerceIn(0f, 1f))
+                    val effectiveJoystickCanLockColor = currentJoystickCanLockColor.copy(alpha = (currentJoystickCanLockColor.alpha * freeAlphaFactor).coerceIn(0f, 1f))
+                    val effectiveJoystickLockedColor = currentJoystickLockedColor.copy(alpha = (currentJoystickLockedColor.alpha * freeAlphaFactor).coerceIn(0f, 1f))
+                    val effectiveLockMarkColor = currentLockMarkColor.copy(alpha = (currentLockMarkColor.alpha * freeAlphaFactor).coerceIn(0f, 1f))
 
-                    // 绘制锁定标记
-                    if (data.isLocked) {
-                        drawCircle(
-                            color = currentLockMarkColor,
-                            center = Offset(bgCenter.x, 0f),
-                            radius = 4f
+                    val bgCenter = if (data.triggerMode == com.movtery.layer_controller.data.JoystickTriggerMode.FREE) {
+                        defaultCenter + animatedBaseOffset
+                    } else {
+                        defaultCenter
+                    }
+
+                    translate(left = bgCenter.x - defaultCenter.x, top = bgCenter.y - defaultCenter.y) {
+                        // 背景层
+                        drawBackgroundLayer(
+                            layoutDirection = layoutDirection,
+                            size = Size(size.width, size.height),
+                            shape = backgroundShape,
+                            backgroundColor = effectiveBgColor,
+                            borderColor = effectiveBorderColor,
+                            borderWidthPx = (minSide * borderWidthRatio).coerceAtLeast(0f)
                         )
+
+                        // 摇杆头
+                        val knobSize = minSide * joystickSizeRatio
+                        val knobCenter = Offset(
+                            defaultCenter.x + data.knobOffset.x,
+                            defaultCenter.y + data.knobOffset.y
+                        )
+                        drawJoystick(
+                            layoutDirection = layoutDirection,
+                            color = when {
+                                data.isLocked -> effectiveJoystickLockedColor
+                                data.canLockState -> effectiveJoystickCanLockColor
+                                else -> effectiveJoystickColor
+                            },
+                            center = knobCenter,
+                            size = knobSize,
+                            shape = joystickShape
+                        )
+
+                        // 绘制锁定标记
+                        if (data.isLocked) {
+                            drawCircle(
+                                color = effectiveLockMarkColor,
+                                center = Offset(defaultCenter.x, 0f),
+                                radius = 4f
+                            )
+                        }
                     }
                 }
             }

@@ -102,6 +102,14 @@ fun MobileGluesSettingsDialog(onDismissRequest: () -> Unit) {
 
     var showResetConfirm by remember { mutableStateOf(false) }
 
+    val mgVersion = remember {
+        runCatching {
+            val jsonStr = context.assets.open("mobileglues/metadata.json").bufferedReader().use { it.readText() }
+            val obj = com.google.gson.JsonParser.parseString(jsonStr).asJsonObject
+            obj.get("version")?.asString
+        }.getOrNull() ?: "v2.0.0"
+    }
+
     Dialog(onDismissRequest = onDismissRequest) {
         Surface(
             modifier = Modifier
@@ -115,10 +123,21 @@ fun MobileGluesSettingsDialog(onDismissRequest: () -> Unit) {
             Column(
                 modifier = Modifier.padding(20.dp)
             ) {
-                Text(
-                    text = stringResource(R.string.mobileglues_settings_title),
-                    style = MaterialTheme.typography.titleLarge
-                )
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = stringResource(R.string.mobileglues_settings_title),
+                        style = MaterialTheme.typography.titleLarge
+                    )
+                    Text(
+                        text = mgVersion,
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                }
 
                 Spacer(modifier = Modifier.height(12.dp))
 
@@ -190,6 +209,11 @@ fun MobileGluesSettingsDialog(onDismissRequest: () -> Unit) {
                         value = customGLVersion,
                         options = glVersions,
                         onValueChange = { customGLVersion = it }
+                    )
+
+                    Fsr1Picker(
+                        value = fsr1Setting,
+                        onValueChange = { fsr1Setting = it }
                     )
 
                     HorizontalDivider()
@@ -486,4 +510,28 @@ private fun DropdownSettingRow(
             }
         }
     }
+}
+
+@Composable
+private fun Fsr1Picker(value: Int, onValueChange: (Int) -> Unit) {
+    val disabled = stringResource(R.string.mobileglues_fsr1_disabled)
+    val ultraQuality = stringResource(R.string.mobileglues_fsr1_ultra_quality)
+    val quality = stringResource(R.string.mobileglues_fsr1_quality)
+    val balanced = stringResource(R.string.mobileglues_fsr1_balanced)
+    val performance = stringResource(R.string.mobileglues_fsr1_performance)
+    val options = remember(disabled, ultraQuality, quality, balanced, performance) {
+        listOf(
+            disabled to 0,
+            ultraQuality to 1,
+            quality to 2,
+            balanced to 3,
+            performance to 4
+        )
+    }
+    DropdownSettingRow(
+        label = stringResource(R.string.mobileglues_fsr1),
+        options = options,
+        selectedValue = value,
+        onValueChange = onValueChange
+    )
 }

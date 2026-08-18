@@ -65,6 +65,68 @@ fun EditJoystickConfig(
                 getItemText = { it.getTriggerModeText() }
             )
 
+            // 自由模式配置
+            if (data.triggerMode == JoystickTriggerMode.FREE) {
+                // 自由模式活动半径 (比例)
+                InfoLayoutSliderItem(
+                    modifier = Modifier.fillMaxWidth(),
+                    title = stringResource(R.string.control_editor_edit_joystick_free_radius),
+                    value = data.freeRadiusRatio,
+                    onValueChange = { data.freeRadiusRatio = it },
+                    valueRange = com.movtery.layer_controller.data.JOYSTICK_FREE_RADIUS_RANGE,
+                    decimalFormat = "#0.00",
+                    suffix = "x",
+                    fineTuningStep = 0.1f
+                )
+
+                // 感应区域 X 轴偏移
+                InfoLayoutSliderItem(
+                    modifier = Modifier.fillMaxWidth(),
+                    title = stringResource(R.string.control_editor_edit_joystick_free_offset_x),
+                    value = data.freeOffsetX / 100f,
+                    onValueChange = { data.freeOffsetX = (it * 100).toInt() },
+                    valueRange = -100f..100f,
+                    decimalFormat = "#0.00",
+                    suffix = "%",
+                    fineTuningStep = 1.0f
+                )
+
+                // 感应区域 Y 轴偏移
+                InfoLayoutSliderItem(
+                    modifier = Modifier.fillMaxWidth(),
+                    title = stringResource(R.string.control_editor_edit_joystick_free_offset_y),
+                    value = data.freeOffsetY / 100f,
+                    onValueChange = { data.freeOffsetY = (it * 100).toInt() },
+                    valueRange = -100f..100f,
+                    decimalFormat = "#0.00",
+                    suffix = "%",
+                    fineTuningStep = 1.0f
+                )
+
+                // 静止时不透明度
+                InfoLayoutSliderItem(
+                    modifier = Modifier.fillMaxWidth(),
+                    title = stringResource(R.string.control_editor_edit_joystick_free_resting_alpha),
+                    value = data.freeRestingAlpha,
+                    onValueChange = { data.freeRestingAlpha = it },
+                    valueRange = com.movtery.layer_controller.data.JOYSTICK_FREE_RESTING_ALPHA_RANGE,
+                    decimalFormat = "#0.00",
+                    fineTuningStep = 0.05f
+                )
+
+                // 动画过渡时长 (ms)
+                InfoLayoutSliderItem(
+                    modifier = Modifier.fillMaxWidth(),
+                    title = stringResource(R.string.control_editor_edit_joystick_free_anim_duration),
+                    value = data.freeAnimationDurationMs.toFloat(),
+                    onValueChange = { data.freeAnimationDurationMs = it.toInt() },
+                    valueRange = com.movtery.layer_controller.data.JOYSTICK_FREE_ANIMATION_DURATION_RANGE,
+                    decimalFormat = "#0",
+                    suffix = " ms",
+                    fineTuningStep = 25f
+                )
+            }
+
             Spacer(modifier = Modifier.height(4.dp))
 
             // 前进锁

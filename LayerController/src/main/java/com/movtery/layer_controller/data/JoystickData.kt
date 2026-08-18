@@ -55,6 +55,19 @@ val JOYSTICK_DEAD_ZONE_RANGE: ClosedFloatingPointRange<Float> = 0.0f..0.9f
 val JOYSTICK_LOCK_THRESHOLD_RANGE: ClosedFloatingPointRange<Float> = 0.0f..1.0f
 
 /**
+ * 自由模式有效半径比例取值范围（相对于摇杆自身大小）
+ */
+/**
+ * 自由模式未激活时的不透明度取值范围 (0.0 = 完全透明, 1.0 = 完全不透明)
+ */
+val JOYSTICK_FREE_RESTING_ALPHA_RANGE: ClosedFloatingPointRange<Float> = 0.0f..1.0f
+
+/**
+ * 自由模式动画过渡时长 (毫秒)
+ */
+val JOYSTICK_FREE_ANIMATION_DURATION_RANGE: ClosedFloatingPointRange<Float> = 0f..1000f
+
+/**
  * 摇杆控件数据模型
  * 摇杆始终为正方形，宽高使用同一个数值
  * @param uuid 控件唯一标识
@@ -67,7 +80,12 @@ val JOYSTICK_LOCK_THRESHOLD_RANGE: ClosedFloatingPointRange<Float> = 0.0f..1.0f
  * @param deadZoneRatio 死区比例
  * @param lockThreshold 前进锁阈值（相对于背景层大小的百分比）
  * @param canLock 是否支持前进锁
- * @param triggerMode 操控方式（拖动触发 / 触碰触发）
+ * @param triggerMode 操控方式（拖动触发 / 触碰触发 / 自由模式）
+ * @param freeRadiusRatio 自由模式活动半径比例
+ * @param freeOffsetX 自由模式感应区 X 偏移 (百分比 100 = 1%)
+ * @param freeOffsetY 自由模式感应区 Y 偏移 (百分比 100 = 1%)
+ * @param freeRestingAlpha 自由模式静止时的不透明度 (0.0 - 1.0)
+ * @param freeAnimationDurationMs 自由模式基座移动与恢复的动画时长 (ms)
  * @param directionEvents 方向绑定事件
  * @param lockEvents 锁定时触发的事件列表
  */
@@ -95,6 +113,16 @@ data class JoystickData(
     val canLock: Boolean = true,
     @SerialName("triggerMode")
     val triggerMode: JoystickTriggerMode = JoystickTriggerMode.DRAG,
+    @SerialName("freeRadiusRatio")
+    val freeRadiusRatio: Float = 1.5f,
+    @SerialName("freeOffsetX")
+    val freeOffsetX: Int = 0,
+    @SerialName("freeOffsetY")
+    val freeOffsetY: Int = 0,
+    @SerialName("freeRestingAlpha")
+    val freeRestingAlpha: Float = 0.25f,
+    @SerialName("freeAnimationDurationMs")
+    val freeAnimationDurationMs: Int = 150,
     @SerialName("directionEvents")
     val directionEvents: Map<JoystickDirection, List<ClickEvent>> = DefaultDirectionEvents,
     @SerialName("lockEvents")
@@ -104,6 +132,9 @@ data class JoystickData(
         require(sizeType != ButtonSize.Type.WrapContent) { "JoystickData does not support WrapContent size type" }
         checkInRange("deadZoneRatio", deadZoneRatio, JOYSTICK_DEAD_ZONE_RANGE)
         checkInRange("lockThreshold", lockThreshold, JOYSTICK_LOCK_THRESHOLD_RANGE)
+        checkInRange("freeRadiusRatio", freeRadiusRatio, JOYSTICK_FREE_RADIUS_RANGE)
+        checkInRange("freeRestingAlpha", freeRestingAlpha, JOYSTICK_FREE_RESTING_ALPHA_RANGE)
+        checkInRange("freeAnimationDurationMs", freeAnimationDurationMs.toFloat(), JOYSTICK_FREE_ANIMATION_DURATION_RANGE)
     }
 
     /**
@@ -155,6 +186,11 @@ data class JoystickData(
                 this.lockThreshold != other.lockThreshold ||
                 this.canLock != other.canLock ||
                 this.triggerMode != other.triggerMode ||
+                this.freeRadiusRatio != other.freeRadiusRatio ||
+                this.freeOffsetX != other.freeOffsetX ||
+                this.freeOffsetY != other.freeOffsetY ||
+                this.freeRestingAlpha != other.freeRestingAlpha ||
+                this.freeAnimationDurationMs != other.freeAnimationDurationMs ||
                 this.directionEvents != other.directionEvents ||
                 this.lockEvents != other.lockEvents
     }
@@ -193,6 +229,11 @@ fun JoystickData.cloneNew(): JoystickData = JoystickData(
     lockThreshold = lockThreshold,
     canLock = canLock,
     triggerMode = triggerMode,
+    freeRadiusRatio = freeRadiusRatio,
+    freeOffsetX = freeOffsetX,
+    freeOffsetY = freeOffsetY,
+    freeRestingAlpha = freeRestingAlpha,
+    freeAnimationDurationMs = freeAnimationDurationMs,
     directionEvents = directionEvents,
     lockEvents = lockEvents
 )

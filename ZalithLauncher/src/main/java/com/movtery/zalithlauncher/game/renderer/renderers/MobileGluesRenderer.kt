@@ -25,13 +25,23 @@ object MobileGluesRenderer : RendererInterface {
 
     override fun getUniqueIdentifier(): String = "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
 
-    override fun getRendererName(): String = "MobileGlues"
+    override fun getRendererName(): String {
+        val version = runCatching {
+            val jsonStr = com.movtery.zalithlauncher.context.GlobalContext.assets.open("mobileglues/metadata.json").bufferedReader().use { it.readText() }
+            val obj = com.google.gson.JsonParser.parseString(jsonStr).asJsonObject
+            obj.get("version")?.asString
+        }.getOrNull() ?: "v2.0.0"
 
-    override fun getRendererSummary(): String = "GL on top of OpenGL ES"
+        return "MobileGlues $version"
+    }
+
+    override fun getMinMCVersion(): String = "1.17"
+
+    override fun getRendererSummary(): String? = null
 
     override fun getRendererEnv(): Lazy<Map<String, String>> = lazy { emptyMap() }
 
     override fun getDlopenLibrary(): Lazy<List<String>> = lazy { emptyList() }
 
-    override fun getRendererLibrary(): String = "libMobileGlues.so"
+    override fun getRendererLibrary(): String = "libmobileglues.so"
 }

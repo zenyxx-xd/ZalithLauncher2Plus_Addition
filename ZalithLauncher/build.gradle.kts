@@ -165,6 +165,87 @@ androidComponents {
     }
 }
 
+val downloadMobileGlues by tasks.registering {
+    group = "mobileglues"
+    description = "Dynamically downloads the latest MobileGlues release, extracts libraries, and generates version metadata"
+
+    val jniLibsDir = file("src/main/jniLibs")
+    val assetsDir = file("src/main/assets/mobileglues")
+
+    doLast {
+        val abiMap = mapOf(
+            "lib/arm64-v8a/libmobileglues.so" to File(jniLibsDir, "arm64-v8a/libmobileglues.so"),
+            "lib/armeabi-v7a/libmobileglues.so" to File(jniLibsDir, "armeabi-v7a/libmobileglues.so"),
+            "lib/x86/libmobileglues.so" to File(jniLibsDir, "x86/libmobileglues.so"),
+            "lib/x86_64/libmobileglues.so" to File(jniLibsDir, "x86_64/libmobileglues.so")
+        )
+        val metaFile = File(assetsDir, "metadata.json")
+
+        var latestTag = "unknown"
+        try {
+            val apiUrl = java.net.URI("https://api.github.com/repos/MobileGL-Dev/MobileGlues-release/releases/latest").toURL()
+            val conn = apiUrl.openConnection() as java.net.HttpURLConnection
+            conn.setRequestProperty("User-Agent", "ZalithLauncher-Build")
+            val releaseJson = conn.inputStream.bufferedReader().use { it.readText() }
+
+            val jsonObject = com.google.gson.JsonParser.parseString(releaseJson).asJsonObject
+            latestTag = jsonObject.get("tag_name")?.asString ?: "latest"
+            val assets = jsonObject.getAsJsonArray("assets")
+            var downloadUrl: String? = null
+            for (elem in assets) {
+                val assetObj = elem.asJsonObject
+                val name = assetObj.get("name").asString
+                if (name.endsWith(".apk", ignoreCase = true)) {
+                    downloadUrl = assetObj.get("browser_download_url").asString
+                    break
+                }
+            }
+
+            assetsDir.mkdirs()
+            val metadataObj = com.google.gson.JsonObject().apply {
+                addProperty("version", latestTag)
+                addProperty("name", jsonObject.get("name")?.asString ?: latestTag)
+                addProperty("published_at", jsonObject.get("published_at")?.asString ?: "")
+            }
+            metaFile.writeText(com.google.gson.GsonBuilder().setPrettyPrinting().create().toJson(metadataObj))
+            logger.lifecycle("[MobileGlues] Updated metadata: version=$latestTag")
+
+            val needsDownload = abiMap.values.any { !it.exists() || it.length() == 0L }
+            if (needsDownload && downloadUrl != null) {
+                logger.lifecycle("[MobileGlues] Downloading MobileGlues ($latestTag) from $downloadUrl...")
+                val apkStream = java.net.URI(downloadUrl).toURL().openStream()
+                val zipStream = java.util.zip.ZipInputStream(apkStream)
+                var entry = zipStream.nextEntry
+                while (entry != null) {
+                    val destFile = abiMap[entry.name]
+                    if (destFile != null) {
+                        destFile.parentFile?.mkdirs()
+                        destFile.outputStream().use { out ->
+                            zipStream.copyTo(out)
+                        }
+                        logger.lifecycle("[MobileGlues] Extracted ${entry.name} -> ${destFile.absolutePath} (${destFile.length()} bytes)")
+                    }
+                    zipStream.closeEntry()
+                    entry = zipStream.nextEntry
+                }
+                zipStream.close()
+            } else {
+                logger.lifecycle("[MobileGlues] Native libraries are present.")
+            }
+        } catch (e: Exception) {
+            logger.warn("[MobileGlues] Network lookup/download failed: ${e.message}")
+            if (!metaFile.exists()) {
+                assetsDir.mkdirs()
+                metaFile.writeText("{\"version\": \"v2.0.0\"}")
+            }
+        }
+    }
+}
+
+tasks.named("preBuild").configure {
+    dependsOn(downloadMobileGlues)
+}
+
 
 kotlin {
     compilerOptions {

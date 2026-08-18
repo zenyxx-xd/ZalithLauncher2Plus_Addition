@@ -177,6 +177,7 @@ fun JoystickTriggerMode.getTriggerModeText(): String {
     val textRes = when (this) {
         JoystickTriggerMode.DRAG -> R.string.control_editor_edit_joystick_trigger_mode_drag
         JoystickTriggerMode.TOUCH -> R.string.control_editor_edit_joystick_trigger_mode_touch
+        JoystickTriggerMode.FREE -> R.string.control_editor_edit_joystick_trigger_mode_free
     }
     return stringResource(textRes)
 }

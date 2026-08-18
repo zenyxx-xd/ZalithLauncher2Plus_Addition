@@ -1365,6 +1365,12 @@
     <string name="control_editor_edit_joystick_trigger_mode">Trigger Mode</string>
     <string name="control_editor_edit_joystick_trigger_mode_drag">Drag Trigger</string>
     <string name="control_editor_edit_joystick_trigger_mode_touch">Touch Trigger</string>
+    <string name="control_editor_edit_joystick_trigger_mode_free">Free Mode (Dynamic Follow)</string>
+    <string name="control_editor_edit_joystick_free_radius">Follow Radius Multiplier</string>
+    <string name="control_editor_edit_joystick_free_offset_x">Action Area Offset X</string>
+    <string name="control_editor_edit_joystick_free_offset_y">Action Area Offset Y</string>
+    <string name="control_editor_edit_joystick_free_resting_alpha">Resting Opacity</string>
+    <string name="control_editor_edit_joystick_free_anim_duration">Move Transition Duration</string>
     <string name="control_editor_edit_size_joystick">Joystick Size</string>
     <string name="control_editor_edit_layer_default">New Control Layer</string>
     <string name="control_editor_edit_button_default">Button</string>
@@ -1622,8 +1628,14 @@
     <string name="mobileglues_timer_query_summary">Enable EXT_timer_query (inverted: off = enabled)</string>
     <string name="mobileglues_direct_state_access">Direct State Access</string>
     <string name="mobileglues_direct_state_access_summary">Enable EXT_direct_state_access</string>
+    <string name="mobileglues_fsr1">AMD FidelityFX FSR 1.0</string>
+    <string name="mobileglues_fsr1_disabled">Disabled</string>
+    <string name="mobileglues_fsr1_ultra_quality">Ultra Quality</string>
+    <string name="mobileglues_fsr1_quality">Quality</string>
+    <string name="mobileglues_fsr1_balanced">Balanced</string>
+    <string name="mobileglues_fsr1_performance">Performance</string>
     <string name="mobileglues_cache_size_label">GLSL Cache Size (MB)</string>
-    <string name="mobileglues_cache_size_supporting">Set -1 to clear cache; 0 uses default (32)</string>
+    <string name="mobileglues_cache_size_supporting">Set -1 to clear cache; 0 to disable; 32 is default</string>
     <string name="mobileglues_saved_toast">MobileGlues settings saved</string>
     <string name="mobileglues_reset_confirm_message">Are you sure you want to reset MobileGlues settings?</string>
 
