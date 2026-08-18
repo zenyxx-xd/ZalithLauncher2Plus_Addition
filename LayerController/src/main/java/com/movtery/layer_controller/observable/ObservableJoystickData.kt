@@ -413,20 +413,20 @@ class ObservableJoystickData(data: JoystickData) : ObservableWidget() {
                                         heightReference = ButtonSize.Reference.ScreenHeight
                                     )
                                     val wPx = when (jSize.type) {
-                                        ButtonSize.Type.Dp -> density.run { jSize.widthDp.toDp().toPx() }
+                                        ButtonSize.Type.Dp -> jSize.widthDp * this.density
                                         ButtonSize.Type.Percentage -> {
                                             val ref = if (jSize.widthReference == ButtonSize.Reference.ScreenWidth) screenSize.width else screenSize.height
                                             ref * (jSize.widthPercentage / 10000f)
                                         }
-                                        else -> density.run { jSize.widthDp.toDp().toPx() }
+                                        else -> jSize.widthDp * this.density
                                     }
                                     val hPx = when (jSize.type) {
-                                        ButtonSize.Type.Dp -> density.run { jSize.heightDp.toDp().toPx() }
+                                        ButtonSize.Type.Dp -> jSize.heightDp * this.density
                                         ButtonSize.Type.Percentage -> {
                                             val ref = if (jSize.heightReference == ButtonSize.Reference.ScreenWidth) screenSize.width else screenSize.height
                                             ref * (jSize.heightPercentage / 10000f)
                                         }
-                                        else -> density.run { jSize.heightDp.toDp().toPx() }
+                                        else -> jSize.heightDp * this.density
                                     }
                                     Size(wPx, hPx)
                                 } else {
@@ -498,20 +498,20 @@ class ObservableJoystickData(data: JoystickData) : ObservableWidget() {
                                     heightReference = ButtonSize.Reference.ScreenHeight
                                 )
                                 val wPx = when (jSize.type) {
-                                    ButtonSize.Type.Dp -> density.run { jSize.widthDp.toDp().toPx() }
+                                    ButtonSize.Type.Dp -> jSize.widthDp * this.density
                                     ButtonSize.Type.Percentage -> {
                                         val ref = if (jSize.widthReference == ButtonSize.Reference.ScreenWidth) screenSize.width else screenSize.height
                                         ref * (jSize.widthPercentage / 10000f)
                                     }
-                                    else -> density.run { jSize.widthDp.toDp().toPx() }
+                                    else -> jSize.widthDp * this.density
                                 }
                                 val hPx = when (jSize.type) {
-                                    ButtonSize.Type.Dp -> density.run { jSize.heightDp.toDp().toPx() }
+                                    ButtonSize.Type.Dp -> jSize.heightDp * this.density
                                     ButtonSize.Type.Percentage -> {
                                         val ref = if (jSize.heightReference == ButtonSize.Reference.ScreenWidth) screenSize.width else screenSize.height
                                         ref * (jSize.heightPercentage / 10000f)
                                     }
-                                    else -> density.run { jSize.heightDp.toDp().toPx() }
+                                    else -> jSize.heightDp * this.density
                                 }
                                 Size(wPx, hPx)
                             } else {
