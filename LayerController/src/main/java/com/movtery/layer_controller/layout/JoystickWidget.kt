@@ -174,6 +174,7 @@ internal fun JoystickWidgetRenderer(
     }
 
     // 动画平滑过渡自由模式下的透明度变化（松开时不移动到原点，直接原地渐隐为0）
+    data.isInEditMode = isEditMode
     val animDuration = data.freeAnimationDurationMs.coerceAtLeast(0)
 
     val targetAlphaFactor = if (isEditMode) {
@@ -193,17 +194,37 @@ internal fun JoystickWidgetRenderer(
 
     if (visible) {
         val isFreeMode = data.triggerMode == com.movtery.layer_controller.data.JoystickTriggerMode.FREE
-        val activeSize = if (isFreeMode) data.freeAreaSize else data.widgetSize
+        val activeSize = if (isFreeMode && !isEditMode) data.freeAreaSize else data.widgetSize
 
         Box(
             modifier = Modifier
                 .onSizeChanged { size ->
                     currentSize = size
                     if (size != IntSize.Zero) {
-                        val joystickRenderSize = data.internalRenderSize.takeIf { it != IntSize.Zero } ?: size
-                        val sizePx = Size(joystickRenderSize.width.toFloat(), joystickRenderSize.height.toFloat())
+                        val joystickRenderSize = if (isFreeMode && !isEditMode) {
+                            val jSize = data.widgetSize
+                            val widthPx = when (jSize.type) {
+                                ButtonSize.Type.Dp -> jSize.widthDp * density.density
+                                ButtonSize.Type.Percentage -> {
+                                    val ref = if (jSize.widthReference == ButtonSize.Reference.ScreenWidth) screenSize.width else screenSize.height
+                                    ref * (jSize.widthPercentage / 10000f)
+                                }
+                                else -> jSize.widthDp * density.density
+                            }
+                            val heightPx = when (jSize.type) {
+                                ButtonSize.Type.Dp -> jSize.heightDp * density.density
+                                ButtonSize.Type.Percentage -> {
+                                    val ref = if (jSize.heightReference == ButtonSize.Reference.ScreenWidth) screenSize.width else screenSize.height
+                                    ref * (jSize.heightPercentage / 10000f)
+                                }
+                                else -> jSize.heightDp * density.density
+                            }
+                            Size(widthPx, heightPx)
+                        } else {
+                            Size(size.width.toFloat(), size.height.toFloat())
+                        }
                         data.backgroundRegion = backgroundShape.toRegion(
-                            size = sizePx,
+                            size = joystickRenderSize,
                             density = density,
                             layoutDirection = layoutDirection
                         )
@@ -214,23 +235,19 @@ internal fun JoystickWidgetRenderer(
                 .buttonSize(activeSize, screenSize)
                 .let { modifier ->
                     if (isEditMode) {
-                        if (isFreeMode) {
-                            modifier // В режиме редактирования Free-джойстик обрабатывается через оверлей зоны
-                        } else {
-                            modifier.editMode(
-                                isEditMode = true,
-                                data = data,
-                                screenSize = screenSize,
-                                enableSnap = enableSnap,
-                                snapMode = snapMode,
-                                localSnapRange = localSnapRange,
-                                getOtherWidgets = getOtherWidgets,
-                                snapThresholdValue = snapThresholdValue,
-                                drawLine = drawLine,
-                                onLineCancel = onLineCancel,
-                                onTapInEditMode = onTapInEditMode ?: {}
-                            )
-                        }
+                        modifier.editMode(
+                            isEditMode = true,
+                            data = data,
+                            screenSize = screenSize,
+                            enableSnap = enableSnap,
+                            snapMode = snapMode,
+                            localSnapRange = localSnapRange,
+                            getOtherWidgets = getOtherWidgets,
+                            snapThresholdValue = snapThresholdValue,
+                            drawLine = drawLine,
+                            onLineCancel = onLineCancel,
+                            onTapInEditMode = onTapInEditMode ?: {}
+                        )
                     } else if (pointerEventBus != null && eventHandler != null && reversedLayers != null) {
                         with(data) {
                             modifier.touchModifier(

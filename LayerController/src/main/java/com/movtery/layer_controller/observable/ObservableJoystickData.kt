@@ -132,27 +132,36 @@ class ObservableJoystickData(data: JoystickData) : ObservableWidget() {
      */
     private var lastDragPosition = Offset.Zero
 
-    override val behavior: InteractionBehavior
-        get() = InteractionBehavior.Press
+    /**
+     * 是否处于编辑模式（由 JoystickWidgetRenderer 设置）
+     */
+    var isInEditMode by mutableStateOf(false)
 
     override val internalRenderPosition: ButtonPosition
-        get() = position
+        get() = if (triggerMode == JoystickTriggerMode.FREE && !isInEditMode) freeAreaPosition else position
 
     override fun putRenderPosition(position: ButtonPosition) {
         this.position = position
     }
 
+    override val behavior: InteractionBehavior
+        get() = InteractionBehavior.Press
+
     override val styleId: String?
         get() = joystickStyleId
 
     override val widgetSize: ButtonSize
-        get() = JoystickData(
-            uuid = uuid,
-            position = position,
-            sizeType = sizeType,
-            sizeDp = sizeDp,
-            sizePercentage = sizePercentage
-        ).toButtonSize()
+        get() = if (triggerMode == JoystickTriggerMode.FREE && !isInEditMode) {
+            freeAreaSize
+        } else {
+            JoystickData(
+                uuid = uuid,
+                position = position,
+                sizeType = sizeType,
+                sizeDp = sizeDp,
+                sizePercentage = sizePercentage
+            ).toButtonSize()
+        }
 
     override fun putWidgetSize(size: ButtonSize) {
         sizeType = size.type
@@ -285,16 +294,22 @@ class ObservableJoystickData(data: JoystickData) : ObservableWidget() {
         lockThresholdPx: Float,
         eventHandler: EventHandler
     ) {
-        val effectivePosition = if (triggerMode == JoystickTriggerMode.FREE) {
-            position - baseOffset
+        val clampedPosition = if (triggerMode == JoystickTriggerMode.FREE) {
+            val delta = position - centerPoint
+            val dist = sqrt(delta.x * delta.x + delta.y * delta.y)
+            val bgRadius = minOf(internalRenderSize.width, internalRenderSize.height) / 2f
+            val maxRadius = if (bgRadius > 0f) bgRadius else 100f
+            if (dist <= maxRadius) {
+                position
+            } else {
+                centerPoint + (delta / dist) * maxRadius
+            }
         } else {
-            position
+            position.clampToRegion(
+                region = backgroundRegion,
+                center = centerPoint
+            )
         }
-
-        val clampedPosition = effectivePosition.clampToRegion(
-            region = backgroundRegion,
-            center = centerPoint
-        )
 
         knobOffset = clampedPosition - centerPoint
 
@@ -308,7 +323,7 @@ class ObservableJoystickData(data: JoystickData) : ObservableWidget() {
         val newCanLockState =
             canLock &&
                     direction == JoystickDirection.North &&
-                    lastDragPosition.y < -lockThresholdPx
+                    (position.y - centerPoint.y) < -lockThresholdPx
 
         if (newCanLockState && !canLockState) {
             eventHandler.onKeyPressed(lockEvents, true)
