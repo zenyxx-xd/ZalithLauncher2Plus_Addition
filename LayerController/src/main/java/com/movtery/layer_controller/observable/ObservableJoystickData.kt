@@ -290,6 +290,7 @@ class ObservableJoystickData(data: JoystickData) : ObservableWidget() {
     private fun updateJoystickState(
         position: Offset,
         centerPoint: Offset,
+        maxRadiusPx: Float,
         deadZoneRadius: Float,
         lockThresholdPx: Float,
         eventHandler: EventHandler
@@ -297,12 +298,11 @@ class ObservableJoystickData(data: JoystickData) : ObservableWidget() {
         val clampedPosition = if (triggerMode == JoystickTriggerMode.FREE) {
             val delta = position - centerPoint
             val dist = sqrt(delta.x * delta.x + delta.y * delta.y)
-            val bgRadius = minOf(internalRenderSize.width, internalRenderSize.height) / 2f
-            val maxRadius = if (bgRadius > 0f) bgRadius else 100f
-            if (dist <= maxRadius) {
+            val maxR = if (maxRadiusPx > 0f) maxRadiusPx else 100f
+            if (dist <= maxR) {
                 position
             } else {
-                centerPoint + (delta / dist) * maxRadius
+                centerPoint + (delta / dist) * maxR
             }
         } else {
             position.clampToRegion(
@@ -476,6 +476,7 @@ class ObservableJoystickData(data: JoystickData) : ObservableWidget() {
                                         updateJoystickState(
                                             position = localPos,
                                             centerPoint = defaultCenter,
+                                            maxRadiusPx = bgRadius,
                                             deadZoneRadius = bgRadius * deadZoneRatio,
                                             lockThresholdPx = bgRadius * lockThreshold,
                                             eventHandler = eventHandler
@@ -543,6 +544,7 @@ class ObservableJoystickData(data: JoystickData) : ObservableWidget() {
                             updateJoystickState(
                                 position = localPos,
                                 centerPoint = effectiveCenter,
+                                maxRadiusPx = bgRadius,
                                 deadZoneRadius = deadZoneRadius,
                                 lockThresholdPx = lockThresholdPx,
                                 eventHandler = eventHandler
@@ -575,6 +577,7 @@ class ObservableJoystickData(data: JoystickData) : ObservableWidget() {
                                 updateJoystickState(
                                     position = lockPosition,
                                     centerPoint = defaultCenter,
+                                    maxRadiusPx = bgRadius,
                                     deadZoneRadius = deadZoneRadius,
                                     lockThresholdPx = lockThresholdPx,
                                     eventHandler = eventHandler
@@ -586,6 +589,7 @@ class ObservableJoystickData(data: JoystickData) : ObservableWidget() {
                                 updateJoystickState(
                                     position = defaultCenter,
                                     centerPoint = defaultCenter,
+                                    maxRadiusPx = bgRadius,
                                     deadZoneRadius = deadZoneRadius,
                                     lockThresholdPx = lockThresholdPx,
                                     eventHandler = eventHandler

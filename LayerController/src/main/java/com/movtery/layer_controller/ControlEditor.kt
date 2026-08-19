@@ -555,36 +555,7 @@ fun ControlEditorLayer(
 
 
 
-                // 自由区域拖动层（在选中的自由区域范围内任意触摸拖动，均可直接移动区域）
-                Box(
-                    modifier = Modifier
-                        .offset { IntOffset(touchOffset.x.roundToInt(), touchOffset.y.roundToInt()) }
-                        .size(
-                            with(density) { freeAreaRenderSize.width.toDp() },
-                            with(density) { freeAreaRenderSize.height.toDp() }
-                        )
-                        .pointerInput(joystick, screenSize, freeAreaRenderSize) {
-                            detectDragGestures(
-                                onDrag = { change, dragAmount ->
-                                    change.consume()
-                                    val cur = getWidgetPosition(joystick.freeAreaPosition, freeAreaRenderSize, screenSize)
-                                    var newX = cur.x + dragAmount.x
-                                    var newY = cur.y + dragAmount.y
 
-                                    val minAreaX = 0f
-                                    val maxAreaX = maxOf(0f, screenSize.width.toFloat() - freeAreaRenderSize.width)
-                                    val minAreaY = 0f
-                                    val maxAreaY = maxOf(0f, screenSize.height.toFloat() - freeAreaRenderSize.height)
-
-                                    newX = newX.coerceIn(minAreaX, maxAreaX)
-                                    newY = newY.coerceIn(minAreaY, maxAreaY)
-
-                                    val finalPos = Offset(newX, newY).toPercentagePosition(freeAreaRenderSize, screenSize)
-                                    joystick.freeAreaPosition = finalPos
-                                }
-                            )
-                        }
-                )
 
                 // 左上角缩放手柄
                 Box(
